@@ -26,7 +26,13 @@ int main()
 				mp[s]=++k;
 				mp2[k]=s;
 			}
-			if(j>1) g[mp[s]][mp[ss]]=g[mp[ss]][mp[s]]=1;
+			if(j>1)
+			{
+				if(i==25) cerr<<s<<" "<<mp[s]<<" "<<ss<<" "<<mp[ss]<<endl;
+				g[mp[s]][mp[ss]]=g[mp[ss]][mp[s]]=1;
+				if(i==25) cerr<<g[mp[ss]][mp[s]]<<endl;
+			}
+			
 			graph[i][j]=mp[s];
 		}
 	}
