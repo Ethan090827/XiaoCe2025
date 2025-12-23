@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏选择 - 地铁猜猜乐</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4c6ef5 0%, #3b5bdb 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            animation: shine 3s infinite linear;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .user-info {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            padding: 12px 30px;
+            border-radius: 50px;
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(5px);
+        }
+        
+        .welcome-message {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto 30px;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 50px 40px;
+        }
+        
+        .game-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        
+        .game-card:hover {
+            transform: translateY(-15px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            border-color: #4c6ef5;
+        }
+        
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #4c6ef5, #3b5bdb);
+        }
+        
+        .card-content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .card-icon {
+            font-size: 4rem;
+            margin-bottom: 25px;
+            color: #4c6ef5;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card-icon.metro {
+            background: linear-gradient(135deg, #4c6ef5, #3b5bdb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .card-icon.city {
+            background: linear-gradient(135deg, #40c057, #2b8a3e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .card-icon.line {
+            background: linear-gradient(135deg, #fab005, #f76707);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .card-icon.history {
+            background: linear-gradient(135deg, #7950f2, #5c3daf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .card-icon.rank {
+            background: linear-gradient(135deg, #f03e3e, #c92a2a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .game-card h3 {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        
+        .game-card p {
+            color: #666;
+            line-height: 1.6;
+            font-size: 1.05rem;
+            margin-bottom: 25px;
+        }
+        
+        .card-badge {
+            display: inline-block;
+            background: #f8f9fa;
+            color: #4c6ef5;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 2px solid #e9ecef;
+        }
+        
+        .footer {
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .logout-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 18px 50px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logout-btn:hover {
+            background: #495057;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(108, 117, 125, 0.3);
+        }
+        
+        .game-rules {
+            background: #f8f9fa;
+            padding: 30px 40px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+        
+        .game-rules h3 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .rules-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .rule-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #4c6ef5;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        
+        .rule-item h4 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .rule-item p {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .game-grid {
+                grid-template-columns: 1fr;
+                padding: 30px 20px;
+                gap: 20px;
+            }
+            
+            .card-content {
+                padding: 30px 20px;
+            }
+            
+            .game-rules {
+                padding: 20px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🎮 游戏选择</h1>
+            <p class="welcome-message">选择一个游戏模式开始挑战，测试你对上海地铁的了解程度！</p>
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                欢迎，{{ session.get('class', '未知') }}班 {{ session.get('name', '同学') }}
+            </div>
+        </div>
+        
+        <!-- 游戏网格 -->
+        <div class="game-grid">
+            <div class="game-card" onclick="location.href='/start_game/metro_guess'">
+                <div class="card-content">
+                    <div class="card-icon metro">
+                        <i class="fas fa-subway"></i>
+                    </div>
+                    <h3>猜地铁站</h3>
+                    <p>你有6次机会猜出目标地铁站，根据区县、线路、距离等信息调整你的猜测</p>
+                    <span class="card-badge">开始游戏</span>
+                </div>
+            </div>
+            
+            <div class="game-card" onclick="location.href='/start_game/city_view'">
+                <div class="card-content">
+                    <div class="card-icon city">
+                        <i class="fas fa-city"></i>
+                    </div>
+                    <h3>国景挑战</h3>
+                    <p>通过国家景观照片猜出对应的国家，考验你对世界景观的熟悉度</p>
+                    <span class="card-badge">即将上线</span>
+                </div>
+            </div>
+            
+            <div class="game-card" onclick="location.href='/leaderboard'">
+                <div class="card-content">
+                    <div class="card-icon rank">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h3>排行榜</h3>
+                    <p>查看所有玩家的成绩排名，挑战成为知识达人</p>
+                    <span class="card-badge">查看</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 游戏规则 -->
+        <div class="game-rules">
+            <h3><i class="fas fa-book"></i> 游戏规则说明</h3>
+            <div class="rules-list">
+                <div class="rule-item">
+                    <h4><i class="fas fa-check-circle"></i> 猜地铁站规则</h4>
+                    <p>你有6次机会猜测目标地铁站，每次猜测后系统会给出反馈，包括：所属区县、线路匹配情况、距离目标站的最小站数和最少换乘次数、开通年份对比等。</p>
+                </div>
+                <div class="rule-item">
+                    <h4><i class="fas fa-star"></i> 评分系统</h4>
+                    <p>每次猜中都会记录你的尝试次数，次数越少得分越高。猜对后的成绩会记录在个人档案中。</p>
+                </div>
+                <div class="rule-item">
+                    <h4><i class="fas fa-lightbulb"></i> 游戏提示</h4>
+                    <p>注意观察区县匹配和线路信息，这些是缩小范围的关键。距离信息可以帮助你判断方向。</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部 -->
+        <div class="footer">
+            <button class="logout-btn" onclick="location.href='/'">
+                <i class="fas fa-sign-out-alt"></i> 退出登录
+            </button>
+            <p style="margin-top: 20px; color: #6c757d; font-size: 0.9rem;">
+                当前版本：1.0.0 | 数据更新至2025.12.15
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 添加卡片点击效果
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                // 添加点击动画
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 200);
+            });
+        });
+        
+        // 添加页面加载动画
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.game-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>
