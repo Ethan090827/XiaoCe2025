@@ -7,7 +7,7 @@ map <string,ll> mp;
 int main()
 {
 	freopen("NameList.txt","r",stdin);
-	freopen("test.csv","w",stdout);
+	freopen("ShortestRoute.csv","w",stdout);
 	scanf("%lld",&T);
 	cerr<<T<<endl;
 	memset(g,0x3f,sizeof(g));

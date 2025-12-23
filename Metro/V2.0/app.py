@@ -178,7 +178,8 @@ def start_game(game_type):
     if game_type == 'metro_guess':
         # 随机选择答案
         all_stations = metro_graph.get_all_stations()
-        ans = input("请指定答案，输入“none”随机生成")
+        ans = "none"
+        # ans = input("请指定答案，输入“none”随机生成")
         if ans == "none":
             answer = random.choice(all_stations)
         else:
@@ -194,7 +195,7 @@ def start_game(game_type):
         print(f"游戏开始 - 答案: {answer}")
         
         return render_template('metro_game.html',
-                             stations=all_stations)
+                               stations=all_stations)
     
     return redirect('/menu')
 
