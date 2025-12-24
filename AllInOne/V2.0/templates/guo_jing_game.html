@@ -217,7 +217,7 @@
 
         .results-header {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr 1fr; /* 修改为4列 */
             gap: 20px;
             padding: 20px;
             background: #f8f9fa;
@@ -253,7 +253,7 @@
         /* 猜测行样式 */
         .guess-row {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr 1fr; /* 修改为4列，与表头对应 */
             gap: 20px;
             padding: 25px 20px;
             margin-bottom: 15px;
@@ -504,7 +504,7 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css  ">
 </head>
 <body>
     <div class="container">
@@ -562,8 +562,9 @@
         <div class="results-section">
             <div class="results-header">
                 <div>猜测国家</div>
-                <div>距离</div>
-                <div>方向</div>
+                <div>距离（大圆）</div>
+                <div>方向（大圆）</div> <!-- 原有方向列 -->
+                <div>方向（经纬度）</div> <!-- 新增方向（经纬度）列 -->
             </div>
             
             <div class="results-container" id="resultsContainer">
@@ -620,10 +621,15 @@
                 const option = document.createElement('div');
                 option.className = 'nation-option';
                 option.textContent = nation;
+                // --- 修改点击行为 ---
                 option.onclick = () => {
+                    // 不再直接提交，而是将选中的名称填入输入框
                     input.value = nation;
                     list.style.display = 'none';
+                    // 可以选择自动聚焦到输入框，方便用户修改或直接按Enter
+                    input.focus();
                 };
+                // ---
                 list.appendChild(option);
             });
             
@@ -674,11 +680,6 @@
                 return;
             }
             
-            if (!nations.includes(guess)) {
-                showError('请输入一个有效的国家名');
-                return;
-            }
-            
             // 禁用按钮防止重复提交
             guessBtn.disabled = true;
             guessBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
@@ -689,7 +690,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ guess: guess })
+                    body: JSON.stringify({ guess: guess }) // 发送用户输入的名称
                 });
                 
                 const data = await response.json();
@@ -783,8 +784,10 @@
                     <div class="distance-label">公里</div>
                 </div>
                 <div class="direction-box">
-                    <span class="direction-label">方向：</span>
-                    <span class="direction-value">${result.direction}</span>
+                    <span class="direction-value">${result.direction1}</span> <!-- 显示中文方向 -->
+                </div>
+                <div class="direction-box">
+                    <span class="direction-value">${result.direction2}</span> <!-- 显示方向（经纬度），即原始角度 -->
                 </div>
             `;
             

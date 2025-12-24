@@ -272,13 +272,15 @@ metro_graph = ShanghaiMetroGraph()
 leaderboard = Leaderboard()
 
 try:
-    from calculator import bearing, dist
+    from calculator import bearing, dist, latlongbrng
 except ImportError:
     print("Warning: calculator.py not found. Using mock functions.")
     # Mock functions for calculator if file is missing
     def bearing(latlong1, latlong2):
         return 0.0
     def dist(latlong1, latlong2):
+        return 0.0
+    def latlongbrng(latlong1, latlong2):
         return 0.0
 
 try:
@@ -299,6 +301,35 @@ except ImportError:
     problem_set = [
         [0, 'test_image.jpg', [30.0, 120.0]], # 使用第一个测试国家的索引
     ]
+    
+def build_nation_lookup():
+    """构建国家名称查找字典 {name.lower(): {'zh_name': str, 'coords': list}}"""
+    lookup = {}
+    for nation_info in nation_template:
+        if nation_info and len(nation_info) > 3:
+            # 假设 nation_info 格式为 [ [en_names], [zh_names], [other_names], [lat, lon] ]
+            # 将所有名称列表合并
+            all_names = []
+            for name_list in nation_info[:3]: # 取前三个列表（英文、中文、其他）
+                if isinstance(name_list, list):
+                    all_names.extend(name_list)
+            coords = nation_info[3]
+
+            # 获取首选中文名（通常是列表第一个）
+            zh_name = nation_info[1][0] if nation_info[1] else "未知国家"
+
+            # 为每个名称创建映射
+            for name in all_names:
+                if isinstance(name, str) and name.strip():
+                    lookup[name.lower()] = {'zh_name': zh_name, 'coords': coords}
+    print("Debug: Nation lookup keys (first 10):", list(lookup.keys())[:10])
+    print("Debug: Example lookup entry for 'china':", lookup.get('china'))
+    return lookup
+
+# 构建查找字典
+nation_lookup = build_nation_lookup()
+
+print(nation_lookup)
 
 @app.route('/')
 def index():
@@ -345,7 +376,7 @@ def start_game(game_type):
         print(f"游戏开始 - 答案: {answer}")
         
         return render_template('metro_game.html',
-                                stations=all_stations)
+                             stations=all_stations)
     elif game_type == 'guo_jing':
         # 随机选择一个题目
         if not problem_set:
@@ -361,12 +392,14 @@ def start_game(game_type):
             nation_info = nation_template[nation_index]
             nation_names = nation_info[0] # 使用英文名作为标准答案
             correct_nation_name = nation_names[0] if nation_names else "Unknown"
+            correct_nation_zh_name = nation_info[1][0] if nation_info[1] else "未知国家" # 获取中文名用于显示
         else:
             return "题目数据错误", 500
 
         session['game_type'] = 'guo_jing'
         session['answer_nation_index'] = nation_index
         session['answer_nation_name'] = correct_nation_name
+        session['answer_nation_zh_name'] = correct_nation_zh_name # 存储中文名
         session['answer_coords'] = target_coords
         session['image_filename'] = image_filename
         session['guesses'] = []
@@ -374,117 +407,27 @@ def start_game(game_type):
         session['max_attempts'] = 6
         session['game_over'] = False
 
-        print(f"国景游戏开始 - 答案: {correct_nation_name}, 坐标: {target_coords}, 图片: {image_filename}")
+        print(f"国景游戏开始 - 答案: {correct_nation_name} ({correct_nation_zh_name}), 坐标: {target_coords}, 图片: {image_filename}")
 
-        # 获取所有国家列表用于前端选择
-        all_nations = [nation[0][0] for nation in nation_template if nation and len(nation[0]) > 0]
-        return render_template('guo_jing_game.html',
-                               nations=all_nations,
-                               image_filename=image_filename)
+        # --- 修改这里 ---
+        # 获取所有国家的**所有可能名称**列表用于前端选择和搜索
+        all_possible_names = []
+        for nation_info in nation_template:
+            if nation_info and len(nation_info) > 3:
+                # 将所有名称列表合并
+                for name_list in nation_info[:3]: # 取前三个列表（英文、中文、其他）
+                    if isinstance(name_list, list):
+                        all_possible_names.extend(name_list)
         
+        # 去重并过滤空字符串
+        all_possible_names = list(set(name for name in all_possible_names if name.strip()))
+        
+        # --- 传递所有可能的名称列表 ---
+        return render_template('guo_jing_game.html',
+                               nations=all_possible_names, # 传递所有可能名称列表
+                               image_filename=image_filename)
+    
     return redirect('/menu')
-
-@app.route('/submit_guess', methods=['POST'])
-def submit_guess():
-    """处理猜测"""
-    if session.get('game_over'):
-        return jsonify({'game_over': True})
-    
-    guess = request.json.get('guess')
-    answer = session.get('answer')
-    
-    if not guess or not answer:
-        return jsonify({'error': '数据错误'})
-    
-    # 获取站点信息
-    guess_info = metro_graph.get_station_info(guess)
-    answer_info = metro_graph.get_station_info(answer)
-    
-    if not guess_info or not answer_info:
-        return jsonify({'error': '站点信息不存在'})
-    
-    # 计算最小站数和换乘次数 (现在从CSV数据获取)
-    min_stations = metro_graph.calculate_min_stations(guess, answer)
-    min_transfers = metro_graph.calculate_min_transfers(guess, answer)
-    
-    # 线路比较
-    guess_lines = set(guess_info.get('lines', []))
-    answer_lines = set(answer_info.get('lines', []))
-    intersection = guess_lines & answer_lines
-    
-    if guess_lines == answer_lines:
-        lines_match = 'perfect'  # 完全正确
-    elif intersection:
-        lines_match = 'partial'  # 部分正确
-    else:
-        lines_match = 'none'     # 完全不匹配
-    
-    # 年份比较
-    opening_year_guess = guess_info.get('opening_year', 0)
-    opening_year_answer = answer_info.get('opening_year', 0)
-    
-    year_relation = 'same'
-    if opening_year_guess > opening_year_answer:
-        year_relation = 'later'
-    elif opening_year_guess < opening_year_answer:
-        year_relation = 'earlier'
-    
-    # 创建结果
-    result = {
-        'guess': guess,
-        'district_match': guess_info.get('district') == answer_info.get('district'),
-        'district_guess': guess_info.get('district', ''),
-        'district_answer': answer_info.get('district', ''),
-        'lines_guess': list(guess_lines),
-        'lines_answer': list(answer_lines),
-        'lines_match': lines_match,
-        'opening_year_guess': opening_year_guess,
-        'opening_year_answer': opening_year_answer,
-        'year_relation': year_relation,
-        'min_stations': min_stations,
-        'min_transfers': min_transfers,
-        'is_correct': guess == answer
-    }
-    
-    # 添加到猜测记录
-    guesses = session.get('guesses', [])
-    guesses.append(result)
-    session['guesses'] = guesses
-    
-    # 更新尝试次数
-    attempts = session.get('attempts', 0) + 1
-    session['attempts'] = attempts
-    
-    # 检查游戏是否结束
-    game_over = False
-    if guess == answer:
-        game_over = True
-        session['game_over'] = True
-        # 游戏成功，记录“猜铁”模块成绩到排行榜
-        class_name = session.get('class', 'Unknown Class')
-        student_name = session.get('name', 'Anonymous')
-        leaderboard.add_score(class_name, student_name, '猜铁', success=True, attempts=attempts, answer=answer)
-    elif attempts >= session.get('max_attempts', 6):
-        game_over = True
-        session['game_over'] = True
-        # 游戏失败，也记录“猜铁”模块成绩（未通过）
-        class_name = session.get('class', 'Unknown Class')
-        student_name = session.get('name', 'Anonymous')
-        leaderboard.add_score(class_name, student_name, '猜铁', success=False, attempts=attempts, answer=answer)
-
-    session.modified = True
-    
-    response_data = {
-        'result': result,
-        'attempts_left': session.get('max_attempts', 6) - attempts,
-        'game_over': game_over
-    }
-    
-    # 只有在游戏结束且没有猜对的情况下才返回答案
-    if game_over and guess != answer:
-        response_data['answer'] = answer
-    
-    return jsonify(response_data)
 
 # app.py (在 submit_guess_guo_jing 函数之前或其他合适的位置添加这个新函数)
 
@@ -494,8 +437,7 @@ def degrees_to_chinese_direction(bearing_degrees):
         bearing_degrees += 360
     bearing_degrees %= 360
 
-    # 定义更细致的中文方向映射 (16个方向)
-    directions = ['北', '北东北', '东北', '东东北', '东', '东东南', '东南', '南东南', '南', '南西南', '西南', '西西南', '西', '西西北', '西北', '北西北']
+    directions = ['⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️']
     index = round(bearing_degrees / (360 / len(directions))) % len(directions)
     return directions[index]
 
@@ -507,44 +449,56 @@ def submit_guess_guo_jing():
     if session.get('game_over'):
         return jsonify({'game_over': True})
 
-    guess_nation_name = request.json.get('guess')
+    guess_input = request.json.get('guess') # 用户输入的可能是中文、英文或简称
     answer_nation_name = session.get('answer_nation_name')
+    answer_nation_zh_name = session.get('answer_nation_zh_name')
     answer_coords = session.get('answer_coords')
 
-    if not guess_nation_name or not answer_nation_name or not answer_coords:
+    if not guess_input or not answer_nation_name or not answer_coords:
         return jsonify({'error': '数据错误'})
 
-    # 在 nation_template 中查找猜测的国家坐标
-    guess_coords = None
-    for nation_info in nation_template:
-        if nation_info and len(nation_info) > 3 and nation_info[0] and guess_nation_name in nation_info[0]:
-            guess_coords = nation_info[3]
-            break
+    # 在 nation_lookup 中查找猜测的国家信息 (现在查找的是输入的原始字符串)
+    lookup_result = nation_lookup.get(guess_input.lower())
+    if not lookup_result:
+        return jsonify({'error': f'猜测的国家不存在: {guess_input}'})
 
-    if not guess_coords:
-        return jsonify({'error': '猜测的国家不存在'})
+    # 获取国家的中文全称和坐标
+    guess_nation_zh_name = lookup_result['zh_name']
+    guess_coords = lookup_result['coords']
 
-    # 计算距离和方向 (现在 bearing 函数返回数值)
+    # 计算距离和方向
     distance = dist(guess_coords, answer_coords)
     bearing_angle_raw = bearing(guess_coords, answer_coords) # 获取度数值
+    latlongbrng_raw = latlongbrng(guess_coords, answer_coords)
 
-    # 确保 bearing_angle 是数值类型 (虽然现在 bearing 函数直接返回数值，但保留检查以防万一)
+    # 确保 bearing_angle 是数值类型
     try:
         bearing_angle = float(bearing_angle_raw)
     except (ValueError, TypeError) as e:
         print(f"Error converting bearing angle '{bearing_angle_raw}' to float: {e}")
+        # 设置一个默认值或返回错误
+        return jsonify({'error': f'计算方向时出错: {e}'})
+    
+    # 确保 bearing_angle 是数值类型
+    try:
+        latlongbrng_angle = float(latlongbrng_raw)
+    except (ValueError, TypeError) as e:
+        print(f"Error converting bearing angle '{latlongbrng_raw}' to float: {e}")
+        # 设置一个默认值或返回错误
         return jsonify({'error': f'计算方向时出错: {e}'})
 
-    # 使用新的中文方向转换函数
-    direction = degrees_to_chinese_direction(bearing_angle)
 
-    # 创建结果
+    direction1 = degrees_to_chinese_direction(bearing_angle) # 使用新的中文方向转换函数\
+    direction2 = degrees_to_chinese_direction(latlongbrng_angle)
+
+    # 创建结果 (显示中文全称)
     result = {
-        'guess': guess_nation_name,
+        'guess': guess_nation_zh_name, # 显示中文全称
         'distance': round(distance, 2),
-        'direction': direction, # 前端现在接收中文方向
+        'direction1': direction1,
+        'direction2': direction2,
         'bearing': round(bearing_angle, 2), # 原始角度，用于前端可能的更复杂处理
-        'is_correct': guess_nation_name == answer_nation_name
+        'is_correct': guess_nation_zh_name == answer_nation_zh_name # 比较也用中文名
     }
 
     # 添加到猜测记录
@@ -558,20 +512,20 @@ def submit_guess_guo_jing():
 
     # 检查游戏是否结束
     game_over = False
-    if guess_nation_name == answer_nation_name:
+    if guess_nation_zh_name == answer_nation_zh_name: # 结束条件也用中文名
         game_over = True
         session['game_over'] = True
-        # 游戏成功，记录“国景”模块成绩到排行榜
+        # 游戏成功，记录“国景”模块成绩到排行榜 (记录中文名)
         class_name = session.get('class', 'Unknown Class')
         student_name = session.get('name', 'Anonymous')
-        leaderboard.add_score(class_name, student_name, '国景', success=True, attempts=attempts, answer=answer_nation_name)
+        leaderboard.add_score(class_name, student_name, '国景', success=True, attempts=attempts, answer=answer_nation_zh_name)
     elif attempts >= session.get('max_attempts', 6):
         game_over = True
         session['game_over'] = True
-        # 游戏失败，也记录“国景”模块成绩（未通过）
+        # 游戏失败，也记录“国景”模块成绩（未通过）(记录中文名)
         class_name = session.get('class', 'Unknown Class')
         student_name = session.get('name', 'Anonymous')
-        leaderboard.add_score(class_name, student_name, '国景', success=False, attempts=attempts, answer=answer_nation_name)
+        leaderboard.add_score(class_name, student_name, '国景', success=False, attempts=attempts, answer=answer_nation_zh_name)
 
     session.modified = True
 
@@ -581,11 +535,12 @@ def submit_guess_guo_jing():
         'game_over': game_over
     }
 
-    # 只有在游戏结束且没有猜对的情况下才返回答案
-    if game_over and guess_nation_name != answer_nation_name:
-        response_data['answer'] = answer_nation_name
+    # 只有在游戏结束且没有猜对的情况下才返回答案 (返回中文名)
+    if game_over and guess_nation_zh_name != answer_nation_zh_name:
+        response_data['answer'] = answer_nation_zh_name
 
     return jsonify(response_data)
+
 
 # 注意：移除或注释掉 app.py 中原来的 format_bearing 函数，因为它不再需要
 # def format_bearing(bearing_angle):
@@ -598,15 +553,7 @@ def submit_guess_guo_jing():
 
 # ... (其他 app.py 代码保持不变) ...
 
-def format_bearing(bearing_angle):
-    """将角度转换为方向描述"""
-    if bearing_angle < 0:
-        bearing_angle += 360
-    bearing_angle %= 360
 
-    directions = ['北', '北东北', '东北', '东东北', '东', '东东南', '东南', '南东南', '南', '南西南', '西南', '西西南', '西', '西西北', '西北', '北西北']
-    index = round(bearing_angle / (360 / len(directions))) % len(directions)
-    return directions[index]
 
 @app.route('/end_game')
 def end_game():
