@@ -402,24 +402,27 @@ def menu():
 def start_game(game_type):
     """开始游戏"""
     if game_type == 'metro_guess':
-        # 随机选择答案
-        all_stations = metro_graph.get_all_stations()
-        answer = random.choice(all_stations)
+        # 随机选择答案 (仅在 session 中没有答案时)
+        if 'answer' not in session:
+            all_stations = metro_graph.get_all_stations()
+            answer = random.choice(all_stations)
+            session['answer'] = answer
+            session['guesses'] = [] # 初始化猜测列表
+            session['attempts'] = 0
+            session['game_over'] = False
+            print(f"猜铁游戏开始 - 新答案: {answer}")
+        else:
+            print(f"猜铁游戏继续 - 答案: {session['answer']}, 已有猜测: {len(session['guesses'])}")
         
         session['game_type'] = 'metro_guess'
-        session['answer'] = answer
-        session['guesses'] = []
-        session['attempts'] = 0
         session['max_attempts'] = 6
-        session['game_over'] = False
-        
-        # 测试输出
-        print(f"游戏开始 - 答案: {answer}")
         
         return render_template('metro_game.html',
-                             stations=all_stations)
+                             stations=metro_graph.get_all_stations(),
+                             initial_guesses=session.get('guesses', [])) # 传递历史猜测
         
     elif game_type == 'guo_jing':
+        # ... (其他代码保持不变) ...
         # 随机选择一个题目
         if not problem_set:
             return "没有可用的题目", 500
@@ -470,45 +473,32 @@ def start_game(game_type):
                                image_filename=image_filename)
     
     elif game_type == 'tian_guo':
-        # --- 修改这里：不再随机选择，而是使用 session 中的索引 ---
+        # ... (其他代码保持不变) ...
         if not fill_guo_problems:
             return "没有可用的题目", 500
 
-        # 从 session 获取当前题目索引，如果不存在则默认为 0
         problem_index = session.get('fill_guo_problem_index', 0)
-        # 确保索引在有效范围内
         if problem_index >= len(fill_guo_problems):
-             # 如果索引超出范围，可能意味着所有题目都已完成
-             # 可以选择返回菜单或显示一个结束页面
-             # 这里暂时假设索引是有效的，或者在 fill_guo_select_nation 中已处理
-             # 为了安全起见，可以添加检查
              if problem_index == len(fill_guo_problems): # 刚完成最后一题
-                 # 可以显示一个“全部完成”的页面，或者返回菜单
-                 # 暂时返回菜单
                  return redirect('/menu')
              else:
                  return "题目数据错误或索引超出范围", 500
 
         problem = fill_guo_problems[problem_index]
         
-        # 获取所有国家的**所有可能名称**列表用于前端选择弹窗
         all_possible_names = []
         for nation_info in nation_template:
             if nation_info and len(nation_info) > 3:
-                # 将所有名称列表合并
-                for name_list in nation_info[:2]: # 取前三个列表（英文、中文、其他）
+                for name_list in nation_info[:2]:
                     if isinstance(name_list, list):
                         all_possible_names.extend(name_list)
         
-        # 去重并过滤空字符串
         all_possible_names = list(set(name for name in all_possible_names if name.strip()))
 
         session['game_type'] = 'tian_guo'
-        # 如果 session 中没有设置，则设置为当前索引（首次进入）
         if 'fill_guo_problem_index' not in session:
             session['fill_guo_problem_index'] = problem_index
         session['fill_guo_problem'] = problem
-        # 如果 session 中没有设置网格或游戏状态，则初始化
         if 'fill_guo_grid' not in session:
             session['fill_guo_grid'] = [[None for _ in range(3)] for _ in range(3)]
         if 'fill_guo_errors' not in session:
@@ -947,4 +937,4 @@ def show_leaderboard():
     return render_template('leaderboard.html', scores=scores, page=page, total_pages=total_pages)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(host="0.0.0.0", port=5000)

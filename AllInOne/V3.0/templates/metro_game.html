@@ -1,9 +1,10 @@
+<!-- templates/metro_game.html -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2710的小铺 - 上海地铁</title>
+    <title>2710的小铺 - 猜铁</title>
     <style>
         /* 基础样式 */
         * {
@@ -548,13 +549,13 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css  ">
 </head>
 <body>
     <div class="container">
         <!-- 头部 -->
         <div class="header">
-            <h1>猜上海地铁站</h1>
+            <h1>🚇 猜上海地铁站</h1>
             <p>你有6次机会猜出目标地铁站，根据反馈调整你的猜测！</p>
             <div class="user-info">
                 <i class="fas fa-user"></i>
@@ -567,11 +568,11 @@
             <div class="stats-bar">
                 <div class="stat-box">
                     <h3>剩余尝试次数</h3>
-                    <div class="value" id="attemptsLeft">6</div>
+                    <div class="value" id="attemptsLeft">{{ 6 - session.get('attempts', 0) }}</div>
                 </div>
                 <div class="stat-box">
                     <h3>已猜测次数</h3>
-                    <div class="value" id="attemptsMade">0</div>
+                    <div class="value" id="attemptsMade">{{ session.get('attempts', 0) }}</div>
                 </div>
                 <div class="stat-box">
                     <h3>目标站点</h3>
@@ -607,7 +608,7 @@
             
             <div class="results-container" id="resultsContainer">
                 <!-- 猜测结果将在这里显示 -->
-                <div style="text-align: center; padding: 50px; color: #adb5bd;">
+                <div style="text-align: center; padding: 50px; color: #adb5bd;" id="initialPrompt">
                     <i class="fas fa-subway" style="font-size: 3rem; margin-bottom: 20px; display: block;"></i>
                     <h3>开始你的第一次猜测吧！</h3>
                     <p>选择一个地铁站提交，看看离目标有多远</p>
@@ -645,10 +646,13 @@
     <script>
         // 全局变量
         let stations = {{ stations|tojson }};
-        let attemptsLeft = 6;
-        let attemptsMade = 0;
-        let gameOver = false;
+        let attemptsLeft = {{ 6 - session.get('attempts', 0) }};
+        let attemptsMade = {{ session.get('attempts', 0) }};
+        let gameOver = {{ session.get('game_over', false)|tojson }};
         
+        // --- 新增：从模板接收初始猜测 ---
+        let initialGuesses = {{ initial_guesses|tojson }} || [];
+
         // 初始化搜索框
         function initSearch() {
             const input = document.getElementById('stationInput');
@@ -795,17 +799,18 @@
             
             setTimeout(() => {
                 errorDiv.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => errorDiv.remove(), 300);
+                setTimeout(() => errorDiv.remove(), 3000);
             }, 3000);
         }
         
         // 显示结果
         function displayResult(result) {
             const container = document.getElementById('resultsContainer');
+            const initialPrompt = document.getElementById('initialPrompt');
             
-            // 移除初始提示
-            if (container.children.length === 1 && container.children[0].querySelector('.fa-subway')) {
-                container.innerHTML = '';
+            // 移除初始提示 (如果存在)
+            if (initialPrompt) {
+                container.removeChild(initialPrompt);
             }
             
             // 线路匹配样式
@@ -930,6 +935,17 @@
                     this.style.display = 'none';
                 }
             });
+
+            // --- 新增：加载初始猜测 ---
+            if (initialGuesses && initialGuesses.length > 0) {
+                // 如果有初始猜测，则按顺序显示它们
+                initialGuesses.forEach(guess_result => {
+                    displayResult(guess_result);
+                });
+                // 更新页面上的尝试次数显示
+                document.getElementById('attemptsLeft').textContent = attemptsLeft;
+                document.getElementById('attemptsMade').textContent = attemptsMade;
+            }
         });
     </script>
 </body>
