@@ -1,0 +1,865 @@
+<!-- templates/tian_guo_game.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2710的小铺 - 填国</title>
+    <style>
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* 从 center 改为 flex-start，避免内容区随弹窗移动 */
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 头部样式 */
+        .header {
+            background: linear-gradient(135deg, #4c6ef5 0%, #3b5bdb 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .user-info {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 20px;
+            border-radius: 50px;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+
+        /* 游戏控制区域 */
+        .game-controls {
+            padding: 30px 40px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            text-align: center;
+            min-width: 150px;
+            flex: 1;
+        }
+
+        .stat-box h3 {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-box .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4c6ef5;
+        }
+
+        /* 主内容区域 (居中) */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 40px 30px;
+        }
+
+        /* 使用 Grid 布局对齐约束和网格 */
+        .grid-with-constraints {
+            display: grid;
+            grid-template-columns: auto 1fr; /* 列约束列，网格列 */
+            grid-template-rows: auto 1fr;    /* 行约束行，网格行 */
+        }
+
+        .col-constraints {
+            grid-column: 1;
+            grid-row: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 120px; /* 与网格单元格宽度匹配 */
+        }
+
+        .constraint-cell.col {
+            background: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px; /* 与网格单元格高度匹配 */
+        }
+
+        .row-constraints {
+            grid-column: 2;
+            grid-row: 1;
+            display: flex;
+            gap: 10px;
+        }
+
+        .constraint-cell.row {
+            background: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100px; /* 与网格单元格宽度匹配 */
+            min-height: 40px; /* 固定高度 */
+        }
+
+        .grid-container {
+            grid-column: 2;
+            grid-row: 2;
+            display: grid;
+            grid-template-columns: repeat(3, 100px); /* 与约束宽度匹配 */
+            grid-template-rows: repeat(3, 100px);    /* 与约束高度匹配 */
+            gap: 10px;
+        }
+
+        .grid-cell {
+            width: 100px; /* 与 grid-template-columns 匹配 */
+            height: 100px; /* 与 grid-template-rows 匹配 */
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            overflow: hidden;
+            word-wrap: break-word;
+            padding: 5px;
+        }
+
+        .grid-cell:hover {
+            border-color: #4c6ef5;
+            background: #f8f9fa;
+        }
+
+        .grid-cell.selected {
+            background: #d3f9d8;
+            border-color: #40c057;
+            color: #2b8a3e;
+        }
+
+        .grid-cell.empty::before {
+            content: "?";
+            color: #adb5bd;
+        }
+
+        .grid-cell.filled {
+            background: #e7f5ff;
+            border-color: #4dabf7;
+            color: #339af0;
+        }
+
+        /* 按钮区域 */
+        .buttons-section {
+            padding: 0 40px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            text-align: center;
+        }
+
+        .reset-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 15px;
+        }
+
+        .reset-btn:hover {
+            background: #495057;
+        }
+
+        .back-btn {
+            background: #4c6ef5;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #3b5bdb;
+        }
+
+        /* 国家选择弹窗 */
+        .nation-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 1.8rem;
+            color: #212529;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+        .close-modal:hover {
+            color: #495057;
+        }
+
+        /* 搜索框样式 (复用国景的样式) */
+        .search-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        #modalNationInput {
+            width: 100%;
+            padding: 15px 20px;
+            padding-right: 50px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        #modalNationInput:focus {
+            outline: none;
+            border-color: #4c6ef5;
+            box-shadow: 0 0 0 3px rgba(76, 110, 245, 0.1);
+        }
+
+        #modalNationList {
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            z-index: 1001;
+            display: block;
+        }
+
+        .nation-option {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f3f5;
+            transition: background 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .nation-option:hover {
+            background: #f8f9fa;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        /* 游戏结束弹窗 */
+        .game-over-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content.game-over {
+            padding: 50px;
+            text-align: center;
+        }
+
+        .modal-content.correct h2 {
+            color: #2b8a3e;
+        }
+
+        .modal-content.incorrect h2 {
+            color: #fa5252;
+        }
+
+        .modal-content h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #212529;
+        }
+
+        .modal-content p {
+            font-size: 1.2rem;
+            color: #6c757d;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 15px 35px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4c6ef5 0%, #3b5bdb 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+            border: 2px solid #e9ecef;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            .header, .game-controls, .main-content, .buttons-section {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .stats-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .stat-box {
+                min-width: auto;
+            }
+            .grid-with-constraints {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr;
+            }
+            .col-constraints {
+                grid-column: 1;
+                grid-row: 2;
+                flex-direction: row;
+                width: auto;
+                margin-bottom: 10px;
+            }
+            .constraint-cell.col {
+                min-height: auto;
+                width: 100px;
+            }
+            .row-constraints {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .grid-container {
+                grid-column: 1;
+                grid-row: 3;
+                grid-template-columns: repeat(3, 80px);
+                grid-template-rows: repeat(3, 80px);
+                gap: 8px;
+            }
+            .grid-cell {
+                width: 80px;
+                height: 80px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>填国家</h1>
+            <p>根据约束条件，在九宫格中填入合适的国家！</p>
+            <div class="user-info">
+                <i class="fas fa-user"></i>
+                欢迎，{{ session.get('class', '未知') }}班 {{ session.get('name', '同学') }}
+            </div>
+        </div>
+
+        <!-- 游戏控制区 -->
+        <div class="game-controls">
+            <div class="stats-bar">
+                <div class="stat-box">
+                    <h3>错误次数</h3>
+                    <div class="value" id="errorsCount">0</div>
+                </div>
+                <div class="stat-box">
+                    <h3>剩余机会</h3>
+                    <div class="value" id="errorsLeft">-</div>
+                </div>
+                <div class="stat-box">
+                    <h3>题目难度</h3>
+                    <div class="value" id="problemLevel">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区域 (居中) -->
+        <div class="main-content">
+            <!-- 使用 Grid 布局对齐约束和网格 -->
+            <div class="grid-with-constraints">
+                <!-- 行约束 (上方) -->
+                <div class="row-constraints">
+                    <div class="constraint-cell row">{{ problem.grid_constraints.rows[0] | join(', ') if problem.grid_constraints.rows else '待定' }}</div>
+                    <div class="constraint-cell row">{{ problem.grid_constraints.rows[1] | join(', ') if problem.grid_constraints.rows else '待定' }}</div>
+                    <div class="constraint-cell row">{{ problem.grid_constraints.rows[2] | join(', ') if problem.grid_constraints.rows else '待定' }}</div>
+                </div>
+
+                <!-- 列约束 (左侧) -->
+                <div class="col-constraints">
+                    <div class="constraint-cell col">{{ problem.grid_constraints.cols[0] | join(', ') if problem.grid_constraints.cols else '待定' }}</div>
+                    <div class="constraint-cell col">{{ problem.grid_constraints.cols[1] | join(', ') if problem.grid_constraints.cols else '待定' }}</div>
+                    <div class="constraint-cell col">{{ problem.grid_constraints.cols[2] | join(', ') if problem.grid_constraints.cols else '待定' }}</div>
+                </div>
+
+                <!-- 网格区域 -->
+                <div class="grid-container" id="gridContainer">
+                    <!-- 九个格子将通过 JavaScript 动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 按钮区域 -->
+        <div class="buttons-section">
+            <button class="reset-btn" onclick="resetGrid()">重置网格</button>
+            <button class="back-btn" onclick="location.href='/end_game'">
+                <i class="fas fa-arrow-left"></i> 返回菜单
+            </button>
+        </div>
+    </div>
+
+    <!-- 国家选择弹窗 -->
+    <div class="nation-modal" id="nationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>选择国家</h2>
+                <button class="close-modal" onclick="closeNationModal()">&times;</button>
+            </div>
+            <div class="search-container">
+                <input type="text" id="modalNationInput" placeholder="输入国家名搜索...">
+                <i class="fas fa-search search-icon"></i>
+                <div id="modalNationList" class="nation-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏结束弹窗 -->
+    <div class="game-over-modal" id="gameOverModal">
+        <div class="modal-content game-over" id="gameOverModalContent">
+            <h2 id="endGameTitle">游戏结束</h2>
+            <p id="endGameMessage">您已用完所有机会。</p>
+            <div class="modal-buttons">
+                <button class="modal-btn btn-primary" onclick="location.href='/start_game/tian_guo'">
+                    <i class="fas fa-redo"></i> 再玩一次
+                </button>
+                <button class="modal-btn btn-secondary" onclick="location.href='/end_game'">
+                    <i class="fas fa-home"></i> 返回菜单
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let nations = {{ nations|tojson }};
+        let currentGrid = {{ session.get('fill_guo_grid', [[null, null, null], [null, null, null], [null, null, null]])|tojson }}; // 使用 null 代替 None
+        let errorsCount = {{ session.get('fill_guo_errors', 0) }};
+        let maxErrors = {{ session.get('fill_guo_max_errors', 5) }};
+        let gameOver = {{ session.get('fill_guo_game_over', false)|tojson }};
+        let gameSuccess = {{ session.get('fill_guo_success', false)|tojson }};
+        let selectedCell = null; // 记录当前被点击的格子坐标
+
+        // 初始化网格
+        function initGrid() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = ''; // 清空现有格子
+
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+
+                    const cellValue = currentGrid[row][col];
+                    if (cellValue) {
+                        cell.textContent = cellValue;
+                        cell.classList.add('filled');
+                    } else {
+                        cell.classList.add('empty');
+                    }
+
+                    cell.addEventListener('click', () => openNationModal(row, col));
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        // 打开国家选择弹窗
+        function openNationModal(row, col) {
+            if (gameOver) return; // 游戏结束后不能再操作
+
+            selectedCell = { row, col };
+            document.getElementById('nationModal').style.display = 'flex';
+            document.getElementById('modalNationInput').focus();
+            // 重新初始化弹窗搜索列表
+            initModalSearch();
+        }
+
+        // 关闭国家选择弹窗
+        function closeNationModal() {
+            document.getElementById('nationModal').style.display = 'none';
+            selectedCell = null;
+        }
+
+        // 初始化弹窗搜索框
+        function initModalSearch() {
+            const input = document.getElementById('modalNationInput');
+            const list = document.getElementById('modalNationList');
+            list.innerHTML = ''; // 清空现有选项
+
+            // 创建选项
+            nations.forEach(nation => {
+                const option = document.createElement('div');
+                option.className = 'nation-option';
+                option.textContent = nation;
+                option.onclick = () => selectNation(nation);
+                list.appendChild(option);
+            });
+
+            // 输入事件
+            input.addEventListener('input', function() {
+                const value = this.value.toLowerCase();
+                const options = list.querySelectorAll('.nation-option');
+                
+                options.forEach(option => {
+                    if (option.textContent.toLowerCase().includes(value)) {
+                        option.style.display = 'block';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                });
+            });
+
+            // 点击其他地方关闭列表
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && !list.contains(e.target)) {
+                    // 不关闭弹窗，只隐藏列表
+                    // closeNationModal();
+                }
+            });
+
+            // 键盘事件
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // 简单处理：选择第一个匹配项
+                    const visibleOptions = Array.from(list.querySelectorAll('.nation-option')).filter(opt => opt.style.display !== 'none');
+                    if (visibleOptions.length > 0) {
+                        selectNation(visibleOptions[0].textContent);
+                    }
+                }
+            });
+
+            input.value = ''; // 清空输入框
+        }
+
+        // 选择国家
+        function selectNation(nation) { // nation 是用户在弹窗中选择的名称（可能是英文、中文、简称等）
+            if (!selectedCell) return;
+
+            fetch('/fill_guo_select_nation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    row: selectedCell.row,
+                    col: selectedCell.col,
+                    nation: nation // 直接发送用户选择的名称
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(data.error);
+                    closeNationModal();
+                    return;
+                }
+
+                // --- 修改：处理加载下一题的逻辑 ---
+                if (data.load_next) {
+                    // 更新本地变量
+                    currentGrid = data.grid;
+                    errorsCount = 0; // 新题目的错误次数从0开始
+                    maxErrors = data.errors_left; // 新题目的最大错误次数
+                    // 更新UI
+                    updateUI();
+                    initGrid(); // 重新渲染网格
+                    // 显示提示信息
+                    alert(data.message);
+                    // 不再刷新页面，因为状态已经更新
+                    // location.reload(); // 移除这行
+                    return;
+                }
+
+                // 更新本地网格状态 (即使选择无效，网格也可能被后端回退)
+                if (data.grid) {
+                    currentGrid = data.grid; // currentGrid 现在包含的是中文全称
+                    // 更新错误次数和剩余次数
+                    errorsCount = maxErrors - data.errors_left; // 根据返回的剩余次数计算当前错误数
+                    updateUI();
+                    initGrid(); // 重新渲染网格，现在会显示中文全称
+                }
+
+                // 检查游戏是否结束
+                if (data.game_over) {
+                    gameOver = true;
+                    gameSuccess = data.success;
+                    endGame(data.success, data.message || (data.success ? '恭喜，你填对了！' : '错误次数达到上限。'));
+                } else if (data.error_message) {
+                    // 显示验证错误信息 (例如，国家重复或不符合选项)
+                    showError(data.error_message);
+                }
+
+                closeNationModal();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('网络错误，请重试');
+                closeNationModal();
+            });
+        }
+
+        // 重置网格
+        function resetGrid() {
+            if (gameOver) return; // 游戏结束后不能再操作
+
+            fetch('/fill_guo_reset_grid', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                if (data.grid) {
+                    currentGrid = data.grid;
+                    errorsCount = 0; // 重置错误数
+                    updateUI();
+                    initGrid(); // 重新渲染网格
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('网络错误，请重试');
+            });
+        }
+
+        // 更新UI显示
+        function updateUI() {
+            document.getElementById('errorsCount').textContent = errorsCount;
+            document.getElementById('errorsLeft').textContent = maxErrors - errorsCount;
+            document.getElementById('problemLevel').textContent = maxErrors; // 使用最大错误数作为难度标识
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #ff6b6b;
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                z-index: 3000;
+                animation: slideIn 0.3s ease-out;
+            `;
+            errorDiv.textContent = message;
+            document.body.appendChild(errorDiv);
+
+            setTimeout(() => {
+                errorDiv.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => errorDiv.remove(), 3000);
+            }, 3000);
+        }
+
+        // 游戏结束
+        function endGame(isSuccess, message) {
+            const modal = document.getElementById('gameOverModal');
+            const modalContent = document.getElementById('gameOverModalContent');
+            const title = document.getElementById('endGameTitle');
+            const messageEl = document.getElementById('endGameMessage');
+
+            if (isSuccess) {
+                modalContent.className = 'modal-content game-over correct';
+                title.textContent = '🎉 恭喜你！';
+                messageEl.textContent = message;
+            } else {
+                modalContent.className = 'modal-content game-over incorrect';
+                title.textContent = '😢 很遗憾';
+                messageEl.textContent = message;
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initGrid();
+            updateUI();
+
+            // 添加CSS动画
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // 点击弹窗背景关闭
+            document.getElementById('gameOverModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.style.display = 'none';
+                }
+            });
+            document.getElementById('nationModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeNationModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

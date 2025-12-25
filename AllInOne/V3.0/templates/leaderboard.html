@@ -1,0 +1,169 @@
+<!-- templates/leaderboard.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>2710的小铺 - 排行榜</title>
+    <style>
+        /* 基础样式 */
+        body { font-family: Arial, sans-serif; background-color: #f0f8ff; margin: 0; padding: 20px; }
+        .leaderboard-container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
+        th { background-color: #4CAF50; color: white; }
+        tr:hover { background-color: #f5f5f5; }
+        .back-link { display: inline-block; margin-top: 20px; color: #007BFF; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        .success { color: green; font-weight: bold; }
+        .failure { color: red; font-weight: bold; }
+        .module-col { width: 8%; } /* 为五个填国列设置固定宽度 */
+        .pagination { margin-top: 20px; text-align: center; }
+        .pagination a, .pagination span { display: inline-block; padding: 8px 16px; margin: 0 4px; text-decoration: none; border: 1px solid #ddd; }
+        .pagination a:hover { background-color: #f0f0f0; }
+        .pagination .current { background-color: #4CAF50; color: white; }
+        .login-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #4c6ef5 0%, #3b5bdb 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(76, 110, 245, 0.3);
+        }
+        
+        .login-btn:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="leaderboard-container">
+        <h1>2710的小铺 - 排行榜</h1>
+        {% if scores %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>时间</th>
+                        <th>班级</th>
+                        <th>姓名</th>
+                        <th class="module-col">猜铁</th>
+                        <th class="module-col">国景</th>
+                        <th class="module-col">填国1</th>
+                        <th class="module-col">填国2</th>
+                        <th class="module-col">填国3</th>
+                        <th class="module-col">填国4</th>
+                        <th class="module-col">填国5</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for score in scores %}
+                        <tr>
+                            <td>{{ loop.index0 + (page - 1) * 10 + 1 }}</td> <!-- 计算全局排名 -->
+                            <td>{{ score.timestamp }}</td>
+                            <td>{{ score.class }}</td>
+                            <td>{{ score.name }}</td>
+                            <!-- 猜铁 -->
+                            <td class="module-col">
+                                {% if score.get('猜铁_success') == '1' %}
+                                    <span class="success">✓ ({{ score.get('猜铁_attempts', 'N/A') }})</span>
+                                {% else %}
+                                    <span class="failure">✗</span>
+                                {% endif %}
+                            </td>
+                            <!-- 国景 -->
+                            <td class="module-col">
+                                {% if score.get('国景_success') == '1' %}
+                                    <span class="success">✓ ({{ score.get('国景_attempts', 'N/A') }})</span>
+                                {% else %}
+                                    <span class="failure">✗</span>
+                                {% endif %}
+                            </td>
+                            <!-- 填国1 -->
+                            <td class="module-col">
+                                {% if score.get('填国1_success') == '1' %}
+                                    <span class="success">✓ ({{ score.get('填国1_attempts', 'N/A') }})</span>
+                                {% else %}
+                                    <span class="failure">✗</span>
+                                {% endif %}
+                            </td>
+                            <!-- 填国2 -->
+                            <td class="module-col">
+                                {% if score.get('填国2_success') == '1' %}
+                                    <span class="success">✓ ({{ score.get('填国2_attempts', 'N/A') }})</span>
+                                {% else %}
+                                    <span class="failure">✗</span>
+                                {% endif %}
+                            </td>
+                            <!-- 填国3 -->
+                            <td class="module-col">
+                                {% if score.get('填国3_success') == '1' %}
+                                    <span class="success">✓ ({{ score.get('填国3_attempts', 'N/A') }})</span>
+                                {% else %}
+                                    <span class="failure">✗</span>
+                                {% endif %}
+                            </td>
+                            <!-- 填国4 -->
+                            <td class="module-col">
+                                {% if score.get('填国4_success') == '1' %}
+                                    <span class="success">✓ ({{ score.get('填国4_attempts', 'N/A') }})</span>
+                                {% else %}
+                                    <span class="failure">✗</span>
+                                {% endif %}
+                            </td>
+                            <!-- 填国5 -->
+                            <td class="module-col">
+                                {% if score.get('填国5_success') == '1' %}
+                                    <span class="success">✓ ({{ score.get('填国5_attempts', 'N/A') }})</span>
+                                {% else %}
+                                    <span class="failure">✗</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- 分页控件 -->
+            <div class="pagination">
+                {% if page > 1 %}
+                    <a href="{{ url_for('show_leaderboard', page=page-1) }}">上一页</a>
+                {% endif %}
+
+                <!-- 页码列表 -->
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                        <span class="current">{{ p }}</span>
+                    {% else %}
+                        <a href="{{ url_for('show_leaderboard', page=p) }}">{{ p }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page < total_pages %}
+                    <a href="{{ url_for('show_leaderboard', page=page+1) }}">下一页</a>
+                {% endif %}
+            </div>
+
+            <p>第 {{ page }} 页，共 {{ total_pages }} 页</p>
+
+        {% else %}
+            <p>暂无排行榜数据。</p>
+        {% endif %}
+        <a href="/menu">
+            <button type="button" class="login-btn">
+                <i class="fas fa-sign-in-alt"></i> 返回
+            </button>
+        </a>
+    </div>
+</body>
+</html>
