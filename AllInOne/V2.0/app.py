@@ -109,18 +109,7 @@ class Leaderboard:
             return passed_modules, total_attempts
 
         # 按规则排序：先按通过题数降序，再按总尝试次数升序
-        sorted_data = sorted(self.data, key=lambda x: calculate_score(x)[0], reverse=True) # 先按题数降序
-        # 对于题数相同的，按总尝试次数升序排序
-        # 使用 (passed_modules, total_attempts) 作为排序键，其中 passed_modules 降序，total_attempts 升序
-        # sorted 函数默认是升序，所以对 passed_modules 使用 reverse=True (降序) 需要先排
-        # 为了实现 passed_modules 降序, total_attempts 升序，我们先排 total_attempts，再排 passed_modules
-        # 但更简洁的方式是使用元组 (passed_modules, total_attempts)，并设置 key
-        # sorted_data = sorted(sorted_data, key=lambda x: (calculate_score(x)[0], -calculate_score(x)[1]), reverse=True)
-        # 更好的方式是：
-        # sorted_data = sorted(sorted_data, key=lambda x: (-calculate_score(x)[0], calculate_score(x)[1]))
-        # 这样 -passed_modules 降序（即 passed_modules 升序），total_attempts 升序
-        # 但我们要的是 passed_modules 降序，所以用 -passed_modules，让它在排序时表现得像升序，但实际是降序
-        # 为了让 passed_modules 降序，total_attempts 升序，我们用 (-passed_modules, total_attempts)
+        sorted_data = sorted(self.data, key=lambda x: calculate_score(x)[0], reverse=True)
         sorted_data = sorted(self.data, key=lambda x: (-calculate_score(x)[0], calculate_score(x)[1]))
         return sorted_data
 
@@ -132,7 +121,6 @@ class Leaderboard:
         paginated_scores = all_scores[start:end]
         total_pages = (len(all_scores) + per_page - 1) // per_page  # 向上取整计算总页数
         return paginated_scores, total_pages
-
 
 # --- 上海地铁图类 ---
 class ShanghaiMetroGraph:
@@ -197,7 +185,6 @@ class ShanghaiMetroGraph:
             print(f"Error loading minimum changes: {e}")
 
 
-    
     def load_stations(self):
         """加载上海地铁站点数据"""
         try:
@@ -244,9 +231,6 @@ class ShanghaiMetroGraph:
         if start_station in self.shortest_routes and end_station in self.shortest_routes[start_station]:
             return self.shortest_routes[start_station][end_station]
         else:
-            # 如果站点不存在于预计算数据中，返回一个大值或默认值
-            # 例如，如果CSV数据是完整的，理论上不会走到这里
-            # 但为了健壮性，可以返回一个表示“无穷”的值
             return 100
 
     def calculate_min_transfers(self, start_station: str, end_station: str) -> int:
@@ -254,7 +238,6 @@ class ShanghaiMetroGraph:
         if start_station in self.minimum_changes and end_station in self.minimum_changes[start_station]:
             return self.minimum_changes[start_station][end_station]
         else:
-            # 如果站点不存在于预计算数据中，返回一个大值或默认值
             return 10
 
 
@@ -310,7 +293,7 @@ def build_nation_lookup():
             # 假设 nation_info 格式为 [ [en_names], [zh_names], [other_names], [lat, lon] ]
             # 将所有名称列表合并
             all_names = []
-            for name_list in nation_info[:3]: # 取前三个列表（英文、中文、其他）
+            for name_list in nation_info[:2]: # 取前三个列表（英文、中文、其他）
                 if isinstance(name_list, list):
                     all_names.extend(name_list)
             coords = nation_info[3]
@@ -322,14 +305,12 @@ def build_nation_lookup():
             for name in all_names:
                 if isinstance(name, str) and name.strip():
                     lookup[name.lower()] = {'zh_name': zh_name, 'coords': coords}
-    print("Debug: Nation lookup keys (first 10):", list(lookup.keys())[:10])
-    print("Debug: Example lookup entry for 'china':", lookup.get('china'))
+    # print("Debug: Nation lookup keys (first 10):", list(lookup.keys())[:10])
+    # print("Debug: Example lookup entry for 'china':", lookup.get('china'))
     return lookup
 
 # 构建查找字典
 nation_lookup = build_nation_lookup()
-
-print(nation_lookup)
 
 @app.route('/')
 def index():
@@ -356,6 +337,108 @@ def menu():
     if 'class' not in session:
         return redirect('/')
     return render_template('menu.html')
+
+@app.route('/submit_guess', methods=['POST'])
+def submit_guess():
+    """处理猜测"""
+    if session.get('game_over'):
+        return jsonify({'game_over': True})
+    
+    guess = request.json.get('guess')
+    answer = session.get('answer')
+    
+    if not guess or not answer:
+        return jsonify({'error': '数据错误'})
+    
+    # 获取站点信息
+    guess_info = metro_graph.get_station_info(guess)
+    answer_info = metro_graph.get_station_info(answer)
+    
+    if not guess_info or not answer_info:
+        return jsonify({'error': '站点信息不存在'})
+    
+    # 计算最小站数和换乘次数 (现在从CSV数据获取)
+    min_stations = metro_graph.calculate_min_stations(guess, answer)
+    min_transfers = metro_graph.calculate_min_transfers(guess, answer)
+    
+    # 线路比较
+    guess_lines = set(guess_info.get('lines', []))
+    answer_lines = set(answer_info.get('lines', []))
+    intersection = guess_lines & answer_lines
+    
+    if guess_lines == answer_lines:
+        lines_match = 'perfect'  # 完全正确
+    elif intersection:
+        lines_match = 'partial'  # 部分正确
+    else:
+        lines_match = 'none'     # 完全不匹配
+    
+    # 年份比较
+    opening_year_guess = guess_info.get('opening_year', 0)
+    opening_year_answer = answer_info.get('opening_year', 0)
+    
+    year_relation = 'same'
+    if opening_year_guess > opening_year_answer:
+        year_relation = 'later'
+    elif opening_year_guess < opening_year_answer:
+        year_relation = 'earlier'
+    
+    # 创建结果
+    result = {
+        'guess': guess,
+        'district_match': guess_info.get('district') == answer_info.get('district'),
+        'district_guess': guess_info.get('district', ''),
+        'district_answer': answer_info.get('district', ''),
+        'lines_guess': list(guess_lines),
+        'lines_answer': list(answer_lines),
+        'lines_match': lines_match,
+        'opening_year_guess': opening_year_guess,
+        'opening_year_answer': opening_year_answer,
+        'year_relation': year_relation,
+        'min_stations': min_stations,
+        'min_transfers': min_transfers,
+        'is_correct': guess == answer
+    }
+    
+    # 添加到猜测记录
+    guesses = session.get('guesses', [])
+    guesses.append(result)
+    session['guesses'] = guesses
+    
+    # 更新尝试次数
+    attempts = session.get('attempts', 0) + 1
+    session['attempts'] = attempts
+    
+    # 检查游戏是否结束
+    game_over = False
+    if guess == answer:
+        game_over = True
+        session['game_over'] = True
+        # 游戏成功，记录“猜铁”模块成绩到排行榜
+        class_name = session.get('class', 'Unknown Class')
+        student_name = session.get('name', 'Anonymous')
+        leaderboard.add_score(class_name, student_name, '猜铁', success=True, attempts=attempts, answer=answer)
+    elif attempts >= session.get('max_attempts', 6):
+        game_over = True
+        session['game_over'] = True
+        # 游戏失败，也记录“猜铁”模块成绩（未通过）
+        class_name = session.get('class', 'Unknown Class')
+        student_name = session.get('name', 'Anonymous')
+        leaderboard.add_score(class_name, student_name, '猜铁', success=False, attempts=attempts, answer=answer)
+
+    session.modified = True
+    
+    response_data = {
+        'result': result,
+        'attempts_left': session.get('max_attempts', 6) - attempts,
+        'game_over': game_over
+    }
+    
+    # 只有在游戏结束且没有猜对的情况下才返回答案
+    if game_over and guess != answer:
+        response_data['answer'] = answer
+    
+    return jsonify(response_data)
 
 @app.route('/start_game/<game_type>')
 def start_game(game_type):
@@ -540,19 +623,6 @@ def submit_guess_guo_jing():
         response_data['answer'] = answer_nation_zh_name
 
     return jsonify(response_data)
-
-
-# 注意：移除或注释掉 app.py 中原来的 format_bearing 函数，因为它不再需要
-# def format_bearing(bearing_angle):
-#     if bearing_angle < 0:
-#         bearing_angle += 360
-#     bearing_angle %= 360
-#     directions = ['北', '北东北', '东北', '东东北', '东', '东东南', '东南', '南东南', '南', '南西南', '西南', '西西南', '西', '西西北', '西北', '北西北']
-#     index = round(bearing_angle / (360 / len(directions))) % len(directions)
-#     return directions[index]
-
-# ... (其他 app.py 代码保持不变) ...
-
 
 
 @app.route('/end_game')

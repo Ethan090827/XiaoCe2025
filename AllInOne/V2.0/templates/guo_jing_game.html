@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>猜国家风景 - 国景</title>
+    <title>2710的小铺 - 国景</title>
     <style>
         /* 基础样式 */
         * {
@@ -22,12 +22,14 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px; /* 增加最大宽度以适应新布局 */
             margin: 0 auto;
             background: white;
             border-radius: 16px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         /* 头部样式 */
@@ -189,15 +191,27 @@
             cursor: not-allowed;
         }
 
-        /* 图片区域 */
+        /* 图片和结果区域 (使用 Flexbox 布局) */
+        .content-section {
+            display: flex;
+            flex: 1;
+            min-height: 0; /* 允许 flex 项收缩 */
+        }
+
         .image-section {
-            padding: 30px 40px;
+            flex: 1; /* 图片区占 1 份 */
+            padding: 30px;
             background: #f8f9fa;
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid #e9ecef;
         }
 
         .image-container {
-            max-width: 800px;
+            max-width: 100%;
+            max-height: 70vh; /* 限制图片最大高度 */
             margin: 0 auto;
             border-radius: 12px;
             overflow: hidden;
@@ -208,11 +222,15 @@
             width: 100%;
             height: auto;
             display: block;
+            object-fit: contain; /* 保持图片比例 */
         }
 
         /* 结果区域 */
         .results-section {
+            flex: 1; /* 结果区占 1 份 */
             padding: 30px 40px;
+            display: flex;
+            flex-direction: column;
         }
 
         .results-header {
@@ -229,8 +247,8 @@
         }
 
         .results-container {
-            min-height: 300px;
-            max-height: 500px;
+            flex: 1; /* 结果容器占满剩余空间 */
+            min-height: 0;
             overflow-y: auto;
             padding-right: 10px;
         }
@@ -462,6 +480,19 @@
 
         /* 响应式设计 */
         @media (max-width: 992px) {
+            .container {
+                max-width: 1200px; /* 调整为较小的宽屏 */
+            }
+            
+            .content-section {
+                flex-direction: column; /* 在中等屏幕下，图片和结果垂直排列 */
+            }
+            
+            .image-section {
+                border-right: none;
+                border-bottom: 1px solid #e9ecef; /* 添加底部边框分隔 */
+            }
+
             .header h1 {
                 font-size: 2rem;
             }
@@ -487,6 +518,10 @@
         }
 
         @media (max-width: 576px) {
+            .container {
+                max-width: 100%; /* 在小屏幕上占满宽度 */
+            }
+            
             .header, .game-controls, .image-section, .results-section, .footer {
                 padding: 20px;
             }
@@ -504,13 +539,13 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css  ">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css    ">
 </head>
 <body>
     <div class="container">
         <!-- 头部 -->
         <div class="header">
-            <h1>🌍 猜国家风景</h1>
+            <h1>猜国家风景</h1>
             <p>你有6次机会猜出图片中的国家，根据距离和方向调整你的猜测！</p>
             <div class="user-info">
                 <i class="fas fa-user"></i>
@@ -551,28 +586,31 @@
             </div>
         </div>
 
-        <!-- 图片区域 -->
-        <div class="image-section">
-            <div class="image-container">
-                <img src="{{ url_for('static', filename='images/' + image_filename) }}" alt="待猜测的国家风景图片" id="gameImage">
+        <!-- 图片和结果区域 (新布局) -->
+        <div class="content-section">
+            <!-- 图片区域 -->
+            <div class="image-section">
+                <div class="image-container">
+                    <img src="{{ url_for('static', filename='images/' + image_filename) }}" alt="待猜测的国家风景图片" id="gameImage">
+                </div>
             </div>
-        </div>
 
-        <!-- 结果区域 -->
-        <div class="results-section">
-            <div class="results-header">
-                <div>猜测国家</div>
-                <div>距离（大圆）</div>
-                <div>方向（大圆）</div> <!-- 原有方向列 -->
-                <div>方向（经纬度）</div> <!-- 新增方向（经纬度）列 -->
-            </div>
-            
-            <div class="results-container" id="resultsContainer">
-                <!-- 猜测结果将在这里显示 -->
-                <div style="text-align: center; padding: 50px; color: #adb5bd;">
-                    <i class="fas fa-globe-americas" style="font-size: 3rem; margin-bottom: 20px; display: block;"></i>
-                    <h3>开始你的第一次猜测吧！</h3>
-                    <p>选择一个国家提交，看看离目标有多远</p>
+            <!-- 结果区域 -->
+            <div class="results-section">
+                <div class="results-header">
+                    <div>猜测国家</div>
+                    <div>距离（大圆）</div>
+                    <div>方向（大圆）</div> <!-- 原有方向列 -->
+                    <div>方向（经纬度）</div> <!-- 新增方向（经纬度）列 -->
+                </div>
+                
+                <div class="results-container" id="resultsContainer">
+                    <!-- 猜测结果将在这里显示 -->
+                    <div style="text-align: center; padding: 50px; color: #adb5bd;">
+                        <i class="fas fa-globe-americas" style="font-size: 3rem; margin-bottom: 20px; display: block;"></i>
+                        <h3>开始你的第一次猜测吧！</h3>
+                        <p>选择一个国家提交，看看离目标有多远</p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,5 +1,5 @@
 problem_set = [
-    [35, 'TestImage.jpg', [31, 121]],
+    # [35, 'TestImage.jpg', [31.00, 121.00]],
     [84, '1-Japan.jpg', [35.53, 139.70]],
     [84, '2-Japan.jpg', [38.42, 141.25]],
     [161, '3-South Korea.jpg', [35.16, 129.05]],
