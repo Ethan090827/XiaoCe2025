@@ -1,12 +1,13 @@
 # app.py
 from flask import Flask, render_template, request, jsonify, session, redirect
-import random, csv, os
-from datetime import datetime
+import random, csv, os, uuid
+from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import List, Dict
 
 app = Flask(__name__)
-app.secret_key = 'shanghai-metro-guess-secret-key-2024'
+app.secret_key = 'your-very-secret-key-change-this'
+
 
 class Leaderboard:
     def __init__(self, filename='Leaderboard.csv'):
@@ -28,7 +29,7 @@ class Leaderboard:
             # 如果文件不存在，创建一个带表头的空文件
             # 表头包括通用字段和三个模块的字段
             with open(self.filename, 'w', newline='', encoding='utf-8') as f:
-                fieldnames = ['timestamp', 'class', 'name', '猜铁_success', '猜铁_attempts', '国景_success', '国景_attempts', '填国_success', '填国_attempts']
+                fieldnames = ['timestamp', 'class', 'name', '猜铁_success', '猜铁_attempts', '国景_success', '国景_attempts', '填国1_success', '填国1_attempts', '填国2_success', '填国2_attempts', '填国3_success', '填国3_attempts']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
             self.data = []
@@ -36,15 +37,21 @@ class Leaderboard:
     def save(self):
         """将排行榜数据保存到CSV文件"""
         try:
+            # 确保所有记录都有相同的字段
+            fieldnames = ['timestamp', 'class', 'name', '猜铁_success', '猜铁_attempts', '国景_success', '国景_attempts', '填国1_success', '填国1_attempts', '填国2_success', '填国2_attempts', '填国3_success', '填国3_attempts']
+            
+            # 确保每个记录都有所有字段
+            for entry in self.data:
+                for field in fieldnames:
+                    if field not in entry:
+                        if field.endswith('_success'):
+                            entry[field] = '0'
+                        elif field.endswith('_attempts'):
+                            entry[field] = '0'
+                        elif field == 'timestamp' and 'timestamp' not in entry:
+                            entry[field] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
             with open(self.filename, 'w', newline='', encoding='utf-8') as f:
-                # 动态获取所有字段名，确保灵活性
-                if self.data:
-                    fieldnames = set()
-                    for row in self.data:
-                        fieldnames.update(row.keys())
-                    fieldnames = sorted(list(fieldnames)) # 排序以便于阅读
-                else:
-                    fieldnames = ['timestamp', 'class', 'name', '猜铁_success', '猜铁_attempts', '国景_success', '国景_attempts', '填国_success', '填国_attempts']
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 for entry in self.data:
@@ -55,57 +62,123 @@ class Leaderboard:
     def _find_entry(self, class_name, student_name):
         """辅助方法：查找或创建玩家记录"""
         for entry in self.data:
-            if entry['class'] == class_name and entry['name'] == student_name:
+            if entry.get('class') == class_name and entry.get('name') == student_name:
                 return entry
-        # 如果未找到，创建新记录
-        new_entry = {'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'class': class_name, 'name': student_name}
+        
+        # 如果未找到，创建新记录并初始化所有字段
+        new_entry = {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'class': class_name,
+            'name': student_name,
+            '猜铁_success': '0',
+            '猜铁_attempts': '0',
+            '国景_success': '0',
+            '国景_attempts': '0',
+            '填国1_success': '0',
+            '填国1_attempts': '0',
+            '填国2_success': '0',
+            '填国2_attempts': '0',
+            '填国3_success': '0',
+            '填国3_attempts': '0',
+        }
         self.data.append(new_entry)
         return new_entry
 
     def add_score(self, class_name, student_name, module_name, success, attempts, answer=None):
         """添加或更新特定模块的成绩到排行榜"""
+        
         entry = self._find_entry(class_name, student_name)
 
         success_key = f"{module_name}_success"
         attempts_key = f"{module_name}_attempts"
 
-        # 只有在成功时才更新，或者如果之前未记录过该模块
-        if success or (success_key not in entry):
-            entry[success_key] = '1' if success else '0'
-            entry[attempts_key] = str(attempts) if success else 'N/A' # 未通过则记录N/A或保持原值
+        # --- 获取旧值 ---
+        old_success = entry.get(success_key, '0')
+        old_attempts = entry.get(attempts_key, '0')
+
+        try:
+            current_success = int(old_success)
+            current_attempts = int(old_attempts)
+        except ValueError:
+            # 如果旧值不是数字（例如 'N/A'），则重置为0
+            current_success = 0
+            current_attempts = 0
+
+        # --- 计算新值 ---
+        if module_name == "猜铁" or module_name == "国景":
+            if success:
+                # 成功：总题数 + 1，总尝试次数 + 本轮尝试次数
+                new_success = current_success + 1
+                new_attempts = current_attempts + attempts
+            else:
+                # 失败：总题数不变，总尝试次数 + 本轮尝试次数
+                new_success = current_success
+                new_attempts = current_attempts + attempts
+
+            # --- 更新 entry ---
+            entry[success_key] = str(new_success)
+            entry[attempts_key] = str(new_attempts)
+
             # 更新时间戳
             entry['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            self.save()
+
+            print(f"DEBUG: After update - {success_key}: {entry[success_key]}, {attempts_key}: {entry[attempts_key]}")
+        else:
+            entry['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            if success:
+                entry[success_key] = "1"
+                entry[attempts_key] = str(attempts)
+            else:
+                entry[success_key] = '0'
+                entry[attempts_key] = "N/A"
+            print(f"DEBUG: After update - {success_key}: {entry[success_key]}, {attempts_key}: {entry[attempts_key]}")
+        # 保存到CSV文件
+        self.save()
 
     def update_score(self, class_name, student_name, module_name, success, attempts):
         """
         预留接口：用于其他模块修改或添加成绩。
-        例如，可以在“国景”或“填国”模块完成后调用此方法。
+        例如，可以在"国景"或"填国"模块完成后调用此方法。
         """
         self.add_score(class_name, student_name, module_name, success, attempts)
 
     def get_all_scores(self):
-        """获取所有成绩，按通过题数降序，总尝试次数升序排序"""
+        """获取所有成绩，按通过题数降序，平均尝试次数升序排序"""
         def calculate_score(entry):
-            # 计算通过题数和总尝试次数
             passed_modules = 0
-            total_attempts = 0
-            for module in ['猜铁', '国景', '填国']:
+            total_attempts_for_avg = 0
+            successful_games_for_avg = 0
+            
+            for module in ['猜铁', '国景', '填国1', '填国2', '填国3']:
                 success_key = f"{module}_success"
                 attempts_key = f"{module}_attempts"
-                if entry.get(success_key) == '1':
-                    passed_modules += 1
-                    try:
-                        # 尝试将 attempts 转换为整数，只累加成功模块的尝试次数
-                        total_attempts += int(entry.get(attempts_key, 0))
-                    except ValueError:
-                        # 如果 attempts 不是数字（例如 'N/A'），则跳过
-                        pass
-            return passed_modules, total_attempts
-
-        # 按规则排序：先按通过题数降序，再按总尝试次数升序
-        sorted_data = sorted(self.data, key=lambda x: calculate_score(x)[0], reverse=True)
-        sorted_data = sorted(self.data, key=lambda x: (-calculate_score(x)[0], calculate_score(x)[1]))
+                
+                try:
+                    success_val = int(entry.get(success_key, 0))
+                    attempts_val = int(entry.get(attempts_key, 0))
+                except (ValueError, TypeError):
+                    success_val = 0
+                    attempts_val = 0
+                
+                passed_modules += success_val
+                
+                # 计算平均尝试次数（只针对猜铁和国景）
+                if module in ['猜铁', '国景'] and success_val > 0:
+                    successful_games_for_avg += success_val
+                    total_attempts_for_avg += attempts_val
+            
+            avg_attempts = 0
+            if successful_games_for_avg > 0:
+                avg_attempts = total_attempts_for_avg / successful_games_for_avg
+            
+            # print(passed_modules)
+            return passed_modules, avg_attempts
+        
+        # 一次性排序：先按通过题数降序，再按平均尝试次数升序
+        
+        
+        sorted_data = sorted(self.data, 
+                            key=lambda x: (-calculate_score(x)[0], calculate_score(x)[1]))
         return sorted_data
 
     def get_paginated_scores(self, page, per_page=10):
@@ -381,6 +454,8 @@ def login():
     class_name = request.form.get('class_name')
     student_name = request.form.get('student_name')
     
+    print(str(class_name)+str(student_name)+" Logged In!")
+    
     if class_name and student_name:
         session['class'] = class_name
         session['name'] = student_name
@@ -398,28 +473,39 @@ def menu():
 @app.route('/start_game/<game_type>')
 def start_game(game_type):
     """开始游戏"""
+    # --- 修改：检查当前session是否因失败而结束游戏 ---
+    # 引入一个新变量来标记失败结束状态
+    failure_end_marker = f"{game_type}_failed_ended"
+    
+    if session.get(failure_end_marker):
+        # 如果当前游戏类型标记了因失败而结束，则渲染等待页面
+        return render_template('wait_after_failure.html')
+
+    # ... (其余逻辑保持不变) ...
     if game_type == 'metro_guess':
-        # 随机选择答案 (仅在 session 中没有答案时)
-        if 'answer' not in session:
-            all_stations = metro_graph.get_all_stations()
-            answer = random.choice(all_stations)
-            session['answer'] = answer
-            session['guesses'] = [] # 初始化猜测列表
-            session['attempts'] = 0
-            session['game_over'] = False
-            print(f"猜铁游戏开始 - 新答案: {answer}")
-        else:
-            print(f"猜铁游戏继续 - 答案: {session['answer']}, 已有猜测: {len(session['guesses'])}")
+        # 随机选择答案
+        all_stations = metro_graph.get_all_stations()
+        answer = random.choice(all_stations)
         
         session['game_type'] = 'metro_guess'
+        session['answer'] = answer
+        session['guesses'] = [] # 重置猜测记录
+        session['attempts'] = 0 # 重置尝试次数
         session['max_attempts'] = 6
+        session['game_over'] = False # 游戏未结束
+        session['streak'] = session.get('streak', 0) # 保持或初始化连续猜对次数
+        # --- 清除失败结束标记 ---
+        session.pop(failure_end_marker, None)
+        
+        # 测试输出
+        print(f"猜铁游戏开始 - 答案: {answer}")
         
         return render_template('metro_game.html',
-                             stations=metro_graph.get_all_stations(),
-                             initial_guesses=session.get('guesses', [])) # 传递历史猜测
+                             stations=all_stations,
+                             initial_guesses=[], # 新游戏，初始猜测为空
+                             current_streak=session['streak']) # 传递当前连续猜对次数
         
     elif game_type == 'guo_jing':
-        # ... (其他代码保持不变) ...
         # 随机选择一个题目
         if not problem_set:
             return "没有可用的题目", 500
@@ -444,14 +530,16 @@ def start_game(game_type):
         session['answer_nation_zh_name'] = correct_nation_zh_name # 存储中文名
         session['answer_coords'] = target_coords
         session['image_filename'] = image_filename
-        session['guesses'] = []
-        session['attempts'] = 0
+        session['guesses'] = [] # 重置猜测记录
+        session['attempts'] = 0 # 重置尝试次数
         session['max_attempts'] = 6
-        session['game_over'] = False
+        session['game_over'] = False # 游戏未结束
+        session['streak'] = session.get('streak', 0) # 保持或初始化连续猜对次数
+        # --- 清除失败结束标记 ---
+        session.pop(failure_end_marker, None)
 
         print(f"国景游戏开始 - 答案: {correct_nation_name} ({correct_nation_zh_name}), 坐标: {target_coords}, 图片: {image_filename}")
 
-        # --- 修改这里 ---
         # 获取所有国家的**所有可能名称**列表用于前端选择和搜索
         all_possible_names = []
         for nation_info in nation_template:
@@ -464,13 +552,21 @@ def start_game(game_type):
         # 去重并过滤空字符串
         all_possible_names = list(set(name for name in all_possible_names if name.strip()))
         
-        # --- 传递所有可能的名称列表 ---
         return render_template('guo_jing_game.html',
                                nations=all_possible_names, # 传递所有可能名称列表
-                               image_filename=image_filename)
+                               image_filename=image_filename,
+                               initial_guesses=[], # 新游戏，初始猜测为空
+                               current_streak=session['streak']) # 传递当前连续猜对次数
     
     elif game_type == 'tian_guo':
-        # ... (其他代码保持不变) ...
+        # --- 修改：检查当前session是否因失败而结束游戏 ---
+        # 这个检查在函数入口处已经做了，所以这里不需要重复
+        # if session.get('game_type') == 'tian_guo' and session.get('fill_guo_game_over') and not session.get('fill_guo_success'):
+        #     failure_end_marker = f"{game_type}_failed_ended"
+        #     session[failure_end_marker] = True
+        #     return render_template('wait_after_failure.html')
+
+        # ... (填国部分保持原有逻辑不变) ...
         if not fill_guo_problems:
             return "没有可用的题目", 500
 
@@ -501,11 +597,13 @@ def start_game(game_type):
         if 'fill_guo_errors' not in session:
             session['fill_guo_errors'] = 0
         if 'fill_guo_max_errors' not in session:
-            session['fill_guo_max_errors'] = [5, 8, 10, 15, 20][problem_index]
+            session['fill_guo_max_errors'] = [5, 10, 998244353][problem_index]
         if 'fill_guo_game_over' not in session:
             session['fill_guo_game_over'] = False
         if 'fill_guo_success' not in session:
             session['fill_guo_success'] = False
+        # --- 清除失败结束标记 ---
+        session.pop(failure_end_marker, None)
 
         print(f"填国游戏加载 - 题目 {problem_index + 1}, 最大错误次数: {session['fill_guo_max_errors']}")
 
@@ -517,12 +615,15 @@ def start_game(game_type):
 
 @app.route('/submit_guess', methods=['POST'])
 def submit_guess():
-    """处理猜测"""
+    """处理猜测 (猜铁)"""
     if session.get('game_over'):
         return jsonify({'game_over': True})
     
+    
     guess = request.json.get('guess')
     answer = session.get('answer')
+    
+    print("User:"+session.get('class',"test")+session.get('name',"test")+"\nGuess #"+str(session.get('attempts', 0)+1)+"\nGuess Station:"+guess+"\nAnswer:"+answer)
     
     if not guess or not answer:
         return jsonify({'error': '数据错误'})
@@ -589,16 +690,22 @@ def submit_guess():
     # 检查游戏是否结束
     game_over = False
     if guess == answer:
-        game_over = True
-        session['game_over'] = True
-        # 游戏成功，记录“猜铁”模块成绩到排行榜
+        # --- 修改：猜对了，增加连续猜对次数，标记游戏结束 ---
+        session['streak'] = session.get('streak', 0) + 1
+        game_over = True # 游戏结束
+        session['game_over'] = True # 标记游戏结束
+        # 记录成功成绩到排行榜
         class_name = session.get('class', 'Unknown Class')
         student_name = session.get('name', 'Anonymous')
         leaderboard.add_score(class_name, student_name, '猜铁', success=True, attempts=attempts, answer=answer)
     elif attempts >= session.get('max_attempts', 6):
+        # --- 修改：猜错了且次数用完，标记游戏结束，并设置失败结束标记 ---
         game_over = True
-        session['game_over'] = True
-        # 游戏失败，也记录“猜铁”模块成绩（未通过）
+        session['game_over'] = True # 标记游戏结束
+        failure_end_marker = f"{session.get('game_type', '')}_failed_ended"
+        if failure_end_marker:
+            session[failure_end_marker] = True # 设置失败结束标记
+        # 游戏失败，记录"猜铁"模块成绩（未通过），总题数为0，尝试次数为当前轮次次数
         class_name = session.get('class', 'Unknown Class')
         student_name = session.get('name', 'Anonymous')
         leaderboard.add_score(class_name, student_name, '猜铁', success=False, attempts=attempts, answer=answer)
@@ -608,12 +715,14 @@ def submit_guess():
     response_data = {
         'result': result,
         'attempts_left': session.get('max_attempts', 6) - attempts,
-        'game_over': game_over
+        'game_over': game_over,
+        'streak': session.get('streak', 0) # 返回当前session的连续猜对次数
     }
     
-    # 只有在游戏结束且没有猜对的情况下才返回答案
+    # 只有在游戏结束（猜错）且没有猜对的情况下才返回答案
     if game_over and guess != answer:
         response_data['answer'] = answer
+    # 如果猜对了，不需要返回答案，前端会处理结束逻辑
     
     return jsonify(response_data)
 
@@ -642,6 +751,8 @@ def submit_guess_guo_jing():
     answer_nation_zh_name = session.get('answer_nation_zh_name')
     answer_coords = session.get('answer_coords')
 
+    print("User:"+session.get('class',"test")+session.get('name',"test")+"\nGuess #"+str(session.get('attempts', 0)+1)+"\nGuess Country:"+guess_input+"\nAnswer:"+answer_nation_zh_name)
+    
     if not guess_input or not answer_nation_name or not answer_coords:
         return jsonify({'error': '数据错误'})
 
@@ -701,16 +812,22 @@ def submit_guess_guo_jing():
     # 检查游戏是否结束
     game_over = False
     if guess_nation_zh_name == answer_nation_zh_name: # 结束条件也用中文名
-        game_over = True
-        session['game_over'] = True
-        # 游戏成功，记录“国景”模块成绩到排行榜 (记录中文名)
+        # --- 修改：猜对了，增加连续猜对次数，标记游戏结束 ---
+        session['streak'] = session.get('streak', 0) + 1
+        game_over = True # 游戏结束
+        session['game_over'] = True # 标记游戏结束
+        # 记录成功成绩到排行榜
         class_name = session.get('class', 'Unknown Class')
         student_name = session.get('name', 'Anonymous')
         leaderboard.add_score(class_name, student_name, '国景', success=True, attempts=attempts, answer=answer_nation_zh_name)
     elif attempts >= session.get('max_attempts', 6):
+        # --- 修改：猜错了且次数用完，标记游戏结束，并设置失败结束标记 ---
         game_over = True
-        session['game_over'] = True
-        # 游戏失败，也记录“国景”模块成绩（未通过）(记录中文名)
+        session['game_over'] = True # 标记游戏结束
+        failure_end_marker = f"{session.get('game_type', '')}_failed_ended"
+        if failure_end_marker:
+            session[failure_end_marker] = True # 设置失败结束标记
+        # 游戏失败，记录"国景"模块成绩（未通过），总题数为0，尝试次数为当前轮次次数
         class_name = session.get('class', 'Unknown Class')
         student_name = session.get('name', 'Anonymous')
         leaderboard.add_score(class_name, student_name, '国景', success=False, attempts=attempts, answer=answer_nation_zh_name)
@@ -720,12 +837,14 @@ def submit_guess_guo_jing():
     response_data = {
         'result': result,
         'attempts_left': session.get('max_attempts', 6) - attempts,
-        'game_over': game_over
+        'game_over': game_over,
+        'streak': session.get('streak', 0) # 返回当前session的连续猜对次数
     }
 
-    # 只有在游戏结束且没有猜对的情况下才返回答案 (返回中文名)
+    # 只有在游戏结束（猜错）且没有猜对的情况下才返回答案 (返回中文名)
     if game_over and guess_nation_zh_name != answer_nation_zh_name:
         response_data['answer'] = answer_nation_zh_name
+    # 如果猜对了，不需要返回答案，前端会处理结束逻辑
 
     return jsonify(response_data)
 
@@ -766,12 +885,15 @@ def fill_guo_select_nation():
         if errors >= session.get('fill_guo_max_errors', 5):
             game_over = True
             session['fill_guo_game_over'] = True
-            # 记录失败成绩到排行榜
+            # --- 修改：记录失败成绩到排行榜，并设置失败结束标记 ---
             class_name = session.get('class', 'Unknown Class')
             student_name = session.get('name', 'Anonymous')
             problem_index = session.get('fill_guo_problem_index', 0)
             module_name = f"填国{problem_index + 1}"
             leaderboard.add_score(class_name, student_name, module_name, success=False, attempts=errors, answer="N/A")
+            # 设置失败结束标记
+            failure_end_marker = f"tian_guo_failed_ended" # 固定为 tian_guo
+            session[failure_end_marker] = True
         return jsonify({
             'success': False, # 前端请求失败（因为国家重复）
             'grid': grid, # 返回未修改的网格
@@ -792,12 +914,15 @@ def fill_guo_select_nation():
         if errors >= session.get('fill_guo_max_errors', 5):
             game_over = True
             session['fill_guo_game_over'] = True
-            # 记录失败成绩到排行榜
+            # --- 修改：记录失败成绩到排行榜，并设置失败结束标记 ---
             class_name = session.get('class', 'Unknown Class')
             student_name = session.get('name', 'Anonymous')
             problem_index = session.get('fill_guo_problem_index', 0)
             module_name = f"填国{problem_index + 1}"
             leaderboard.add_score(class_name, student_name, module_name, success=False, attempts=errors, answer="N/A")
+            # 设置失败结束标记
+            failure_end_marker = f"tian_guo_failed_ended" # 固定为 tian_guo
+            session[failure_end_marker] = True
         return jsonify({
             'success': False, # 前端请求失败（因为国家不在选项中）
             'grid': grid, # 返回未修改的网格
@@ -842,7 +967,7 @@ def fill_guo_select_nation():
             session['fill_guo_problem'] = next_problem
             session['fill_guo_grid'] = [[None for _ in range(3)] for _ in range(3)] # 初始化空网格
             session['fill_guo_errors'] = 0 # 重置错误次数
-            session['fill_guo_max_errors'] = [5, 8, 10, 15, 20][next_problem_index] # 根据题目设置最大错误次数
+            session['fill_guo_max_errors'] = [5, 10, 998244353][next_problem_index] # 根据题目设置最大错误次数
             session['fill_guo_game_over'] = False
             session['fill_guo_success'] = False # 重置成功状态
 
@@ -885,12 +1010,15 @@ def fill_guo_select_nation():
     if errors >= session.get('fill_guo_max_errors', 5):
         game_over = True
         session['fill_guo_game_over'] = True
-        # 记录失败成绩到排行榜
+        # --- 修改：记录失败成绩到排行榜，并设置失败结束标记 ---
         class_name = session.get('class', 'Unknown Class')
         student_name = session.get('name', 'Anonymous')
         problem_index = session.get('fill_guo_problem_index', 0)
         module_name = f"填国{problem_index + 1}"
         leaderboard.add_score(class_name, student_name, module_name, success=False, attempts=errors, answer="N/A")
+        # 设置失败结束标记
+        failure_end_marker = f"tian_guo_failed_ended" # 固定为 tian_guo
+        session[failure_end_marker] = True
 
     return jsonify({
         'success': True, # 前端请求本身是成功的（即使国家不符合要求）
@@ -900,7 +1028,7 @@ def fill_guo_select_nation():
         'game_over': game_over,
         'success': False # 未成功完成整个谜题
     })
-    
+
 @app.route('/fill_guo_reset_grid', methods=['POST'])
 def fill_guo_reset_grid():
     """重置填国网格"""

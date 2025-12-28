@@ -1,0 +1,168 @@
+<!-- templates/wait_after_failure.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2710的小铺 - 等待</title>
+    <style>
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            text-align: center;
+            padding: 60px 40px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4c6ef5 0%, #3b5bdb 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 16px 16px 0 0;
+            margin: -60px -40px 40px -40px; /* 调整头部以贴合容器顶部 */
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .user-info {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 20px;
+            border-radius: 50px;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+
+        .message-box {
+            background: #f8f9fa;
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .message-box h2 {
+            font-size: 2rem;
+            color: #fa5252; /* 红色标题 */
+            margin-bottom: 20px;
+        }
+
+        .message-box p {
+            font-size: 1.2rem;
+            color: #6c757d;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        /* 删除 timer 样式 */
+
+        .exit-btn { /* 新增按钮样式 */
+            background: #6c757d; /* 灰色背景 */
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px; /* 与上方内容有一定间距 */
+        }
+
+        .exit-btn:hover {
+            background: #495057; /* 深灰色悬停效果 */
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3); /* 灰色阴影 */
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 20px;
+            }
+            .header {
+                padding: 20px;
+                margin: -40px -20px 20px -20px;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+            .message-box {
+                padding: 30px 20px;
+            }
+            .message-box h2 {
+                font-size: 1.8rem;
+            }
+            .message-box p {
+                font-size: 1.1rem;
+            }
+            /* 删除 timer 字体大小调整 */
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>⏳ 等待</h1>
+            <p>由于猜测错误，请稍后再来</p>
+            <div class="user-info">
+                <i class="fas fa-user"></i>
+                欢迎，{{ session.get('class', '未知') }}班 {{ session.get('name', '同学') }}
+            </div>
+        </div>
+
+        <!-- 提示信息 -->
+        <div class="message-box">
+            <h2><i class="fas fa-exclamation-triangle"></i> 游戏结束</h2>
+            <p>很遗憾，您在当前游戏中的机会已用完。</p>
+            <p>为了给您更好的游戏体验，请稍后再来。</p>
+            <!-- 删除倒计时显示 -->
+        </div>
+
+        <!-- 退出按钮 -->
+        <a href="/" class="exit-btn"> <!-- 修改链接为目标 -->
+            <i class="fas fa-sign-out-alt"></i> 退出到登录界面
+        </a>
+    </div>
+
+    <!-- 删除倒计时脚本 -->
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!-- templates/leaderboard.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2710的小铺 - 排行榜</title>
+    <style>
+        /* 基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 头部样式 */
+        .header {
+            background: linear-gradient(135deg, #4c6ef5 0%, #3b5bdb 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .user-info {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 20px;
+            border-radius: 50px;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+
+        /* 排行榜内容区域 */
+        .leaderboard-content {
+            padding: 40px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        th, td {
+            padding: 12px 15px; /* 调整内边距 */
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        th {
+            background: linear-gradient(135deg, #4c6ef5 0%, #3b5bdb 100%); /* 使用渐变色表头 */
+            color: white;
+            font-weight: 600;
+            position: sticky; /* 表头固定 */
+            top: 0;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa; /* 悬停效果 */
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            background: #6c757d; /* 使用灰色按钮样式 */
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none; /* 去除默认下划线 */
+        }
+
+        .back-link:hover {
+            background: #495057;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
+        }
+
+        /* 分页控件样式 */
+        .pagination {
+            margin-top: 30px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 10px; /* 按钮间间距 */
+        }
+
+        .pagination a, .pagination span {
+            display: inline-block;
+            padding: 10px 18px; /* 调整按钮大小 */
+            margin: 0 4px;
+            text-decoration: none;
+            border: 1px solid #e9ecef;
+            border-radius: 8px; /* 圆角 */
+            color: #4c6ef5;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .pagination a:hover {
+            background-color: #f8f9fa;
+            border-color: #4c6ef5;
+            color: #3b5bdb;
+        }
+
+        .pagination .current {
+            background-color: #4c6ef5;
+            color: white;
+            border-color: #4c6ef5;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            .header, .leaderboard-content {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+            th, td {
+                padding: 10px 8px; /* 小屏下缩小内边距 */
+                font-size: 0.9rem; /* 字体稍小 */
+            }
+            .back-link {
+                padding: 12px 30px;
+                font-size: 1rem;
+            }
+            .pagination {
+                flex-wrap: wrap; /* 小屏下换行 */
+                gap: 5px;
+            }
+            .pagination a, .pagination span {
+                padding: 8px 14px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🏆 排行榜</h1>
+            <p>查看大家的游戏成就</p>
+            <div class="user-info">
+                <i class="fas fa-user"></i>
+                欢迎，{{ session.get('class', '未知') }}班 {{ session.get('name', '同学') }}
+            </div>
+        </div>
+
+        <!-- 排行榜内容区域 -->
+        <div class="leaderboard-content">
+            {% if scores %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>时间</th>
+                            <th>班级</th>
+                            <th>姓名</th>
+                            <th class="module-col">猜铁</th>
+                            <th class="module-col">国景</th>
+                            <th class="module-col">填国1</th>
+                            <th class="module-col">填国2</th>
+                            <th class="module-col">填国3</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for score in scores %}
+                            <tr>
+                                <td>{{ loop.index0 + (page - 1) * 10 + 1 }}</td> <!-- 计算全局排名 -->
+                                <td>{{ score.timestamp }}</td>
+                                <td>{{ score.class }}</td>
+                                <td>{{ score.name }}</td>
+                                <!-- 猜铁 -->
+                                <td class="module-col">
+                                    {% set total_games = score.get('猜铁_success', 0) | int %}
+                                    {% set total_attempts = score.get('猜铁_attempts', 0) | int %}
+                                    {% if total_games > 0 %}
+                                        <span class="success">{{ total_games }} 题, 平均 {{ "%.2f"|format(total_attempts / total_games) }} 次</span>
+                                    {% else %}
+                                        <span class="failure">0 题</span>
+                                    {% endif %}
+                                </td>
+                                <!-- 国景 -->
+                                <td class="module-col">
+                                    {% set total_games = score.get('国景_success', 0) | int %}
+                                    {% set total_attempts = score.get('国景_attempts', 0) | int %}
+                                    {% if total_games > 0 %}
+                                        <span class="success">{{ total_games }} 题, 平均 {{ "%.2f"|format(total_attempts / total_games) }} 次</span>
+                                    {% else %}
+                                        <span class="failure">0 题</span>
+                                    {% endif %}
+                                </td>
+                                <!-- 填国1 -->
+                                <td class="module-col">
+                                    {% if score.get('填国1_success') == '1' %}
+                                        <span class="success">✓ ({{ score.get('填国1_attempts', 'N/A') }})</span>
+                                    {% else %}
+                                        <span class="failure">✗</span>
+                                    {% endif %}
+                                </td>
+                                <!-- 填国2 -->
+                                <td class="module-col">
+                                    {% if score.get('填国2_success') == '1' %}
+                                        <span class="success">✓ ({{ score.get('填国2_attempts', 'N/A') }})</span>
+                                    {% else %}
+                                        <span class="failure">✗</span>
+                                    {% endif %}
+                                </td>
+                                <!-- 填国3 -->
+                                <td class="module-col">
+                                    {% if score.get('填国3_success') == '1' %}
+                                        <span class="success">✓ ({{ score.get('填国3_attempts', 'N/A') }})</span>
+                                    {% else %}
+                                        <span class="failure">✗</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- 分页控件 -->
+                {% if total_pages > 1 %}
+                    <div class="pagination">
+                        {% if page > 1 %}
+                            <a href="{{ url_for('show_leaderboard', page=page-1) }}">上一页</a>
+                        {% endif %}
+
+                        <!-- 页码列表 -->
+                        {% for p in range(1, total_pages + 1) %}
+                            {% if p == page %}
+                                <span class="current">{{ p }}</span>
+                            {% else %}
+                                <a href="{{ url_for('show_leaderboard', page=p) }}">{{ p }}</a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page < total_pages %}
+                            <a href="{{ url_for('show_leaderboard', page=page+1) }}">下一页</a>
+                        {% endif %}
+                    </div>
+
+                    <p style="text-align: center; margin-top: 15px; color: #6c757d;">第 {{ page }} 页，共 {{ total_pages }} 页</p>
+                {% endif %}
+
+            {% else %}
+                <p style="text-align: center; padding: 50px; color: #adb5bd;">暂无排行榜数据。</p>
+            {% endif %}
+
+            <a href="/menu" class="back-link"> <i class="fas fa-arrow-left"></i> 返回游戏菜单</a>
+        </div>
+    </div>
+</body>
+</html>
