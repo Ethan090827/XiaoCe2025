@@ -563,9 +563,12 @@
 
     <!-- 游戏结束弹窗 -->
     <div class="game-over-modal" id="gameOverModal">
-        <div class="modal-content game-over" id="gameOverModalContent">
-            <h2 id="endGameTitle">游戏结束</h2>
-            <p id="endGameMessage">您已用完所有机会。</p>
+        <div class="modal-content" id="modalContent">
+            <h2 id="endMessage">恭喜你填对了！</h2>
+            <p id="endDescription">你成功填出了所有格子！</p>
+            <div class="answer-reveal" id="answerReveal" style="display: none;">
+                正确答案：<span id="correctAnswer"></span>
+            </div>
             <div class="modal-buttons" id="modalButtons">
                 <!-- 按钮将由 JavaScript 动态生成 -->
             </div>
@@ -710,7 +713,7 @@
                     updateUI();
                     initGrid(); // 重新渲染网格
                     // 显示提示信息
-                    alert(data.message);
+                    // alert(data.message);
                     // 不再刷新页面，因为状态已经更新
                     // location.reload(); // 移除这行
                     return;
@@ -724,7 +727,7 @@
                     updateUI();
                     initGrid(); // 重新渲染网格，现在会显示中文全称
                 }
-
+                closeNationModal();
                 // 检查游戏是否结束
                 if (data.game_over) {
                     gameOver = true;
@@ -805,46 +808,54 @@
         }
 
         // 游戏结束
-        function endGame(isSuccess, message) {
+        function endGame(isCorrect, answer) {
             const modal = document.getElementById('gameOverModal');
-            const modalContent = document.getElementById('gameOverModalContent');
-            const title = document.getElementById('endGameTitle');
-            const messageEl = document.getElementById('endGameMessage');
+            const modalContent = document.getElementById('modalContent');
+            const message = document.getElementById('endMessage');
+            const description = document.getElementById('endDescription');
+            const answerReveal = document.getElementById('answerReveal');
+            const modalButtons = document.getElementById('modalButtons');
+            closeNationModal();
+            if (isCorrect) {
+                // 猜对了
+                modalContent.className = 'modal-content correct';
+                message.textContent = '🎉 恭喜你填对了！';
+                description.textContent = `你成功填出了所有格子！`;
+                answerReveal.style.display = 'none';
+            } else {
+                // 次数用完了，没猜对
+                modalContent.className = 'modal-content incorrect';
+                message.textContent = '😢 机会用完了';
+                description.textContent = '你已经用完猜测机会，下次再试试吧！';
+                
+                if (answer) {
+                    document.getElementById('correctAnswer').textContent = answer;
+                    answerReveal.style.display = 'block';
+                }
+            }
 
-            if (isSuccess) {
-                // 猜对了（全部完成）
-                modalContent.className = 'modal-content game-over correct';
-                title.textContent = '🎉 恭喜你！';
-                messageEl.textContent = message;
+            // --- 动态生成按钮 ---
+            modalButtons.innerHTML = ''; // 清空现有按钮
 
-                // --- 修改：只显示“再来一题”按钮 ---
-                const buttonsDiv = modalContent.querySelector('.modal-buttons');
-                buttonsDiv.innerHTML = ''; // 清空现有按钮
+            if (isCorrect) {
+                // 如果猜对了，提供“再来一题”和“退出”按钮
                 const replayBtn = document.createElement('button');
                 replayBtn.className = 'modal-btn btn-primary';
                 replayBtn.innerHTML = '<i class="fas fa-redo"></i> 再来一题';
                 replayBtn.onclick = () => {
                     location.href = '/start_game/tian_guo'; // 重新开始游戏
                 };
-                buttonsDiv.appendChild(replayBtn);
-
-            } else {
-                // 次数用完了，没猜对
-                modalContent.className = 'modal-content game-over incorrect';
-                title.textContent = '😢 很遗憾';
-                messageEl.textContent = message;
-
-                // --- 修改：将“退出”按钮改为“回到主菜单” ---
-                const buttonsDiv = modalContent.querySelector('.modal-buttons');
-                buttonsDiv.innerHTML = ''; // 清空现有按钮
-                const menuBtn = document.createElement('button');
-                menuBtn.className = 'modal-btn btn-primary'; // 使用 primary 样式
-                menuBtn.innerHTML = '<i class="fas fa-home"></i> 回到主菜单';
-                menuBtn.onclick = () => {
-                    location.href = '/menu';
-                };
-                buttonsDiv.appendChild(menuBtn);
+                modalButtons.appendChild(replayBtn);
             }
+
+            // 菜单按钮始终存在
+            const menuBtn = document.createElement('button');
+            menuBtn.className = 'modal-btn btn-secondary';
+            menuBtn.innerHTML = '<i class="fas fa-home"></i> 返回菜单';
+            menuBtn.onclick = () => {
+                location.href = '/menu';
+            };
+            modalButtons.appendChild(menuBtn);
 
             modal.style.display = 'flex';
         }

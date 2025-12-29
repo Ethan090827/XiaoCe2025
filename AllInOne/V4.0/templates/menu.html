@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2710的小铺 - 地铁猜猜乐</title>
+    <title>2710的小铺 - 猜盐</title>
     <style>
         * {
             margin: 0;
@@ -286,10 +286,10 @@
         <!-- 头部 -->
         <div class="header">
             <h1>游戏选择</h1>
-            <p class="welcome-message">选择一个游戏模式开始挑战，测试你对上海地铁的了解程度！</p>
+            <p class="welcome-message">选择一个游戏模式开始挑战，测试你对各种奇怪知识的了解程度！</p>
             <div class="user-info">
                 <i class="fas fa-user-circle"></i>
-                欢迎，{{ session.get('class', '未知') }}班 {{ session.get('name', '同学') }}
+                欢迎，{{ session.get('class', '未知') }}{{ session.get('name', '同学') }}
             </div>
         </div>
         
@@ -320,7 +320,7 @@
             <div class="game-card" onclick="location.href='/start_game/tian_guo'">
                 <div class="card-content">
                     <div class="card-icon rank">
-                        <i class="fas fa-trophy"></i>
+                        <i class="fas fa-map"></i>
                     </div>
                     <h3>填国游戏</h3>
                     <p>向九宫格内填入符合条件的国家，考验你对世界国家的熟悉度</p>
@@ -358,9 +358,8 @@
                 </div>
                 <div class="rule-item">
                     <h4><i class="fas fa-check-circle"></i> 填国规则</h4>
-                    <!-- <p>你有6次机会猜测目标国家，每次猜测后系统会给出反馈，包括：所猜测国家的<b>首都</b>到<b>图片拍摄地</b>的距离、方位（大圆）和方位（经纬度）。</p>
-                    <p>每次猜中都会记录你的尝试次数，次数越少得分越高。猜对后的成绩会记录在个人档案中。</p>
-                    <p>注意距离和方向信息，这些是缩小范围的关键。</p> -->
+                    <p>本版块有三道题目，难度递增，可接受的试错次数也递增，通过一题后自动跳转至下一题。</p>
+                    <p>对于每个格子必须填入<b>完全符合其对应行和列的要求</b>的国家，如对要求有不清楚的请询问2710摊位工作人员</p>
                 </div>
             </div>
         </div>

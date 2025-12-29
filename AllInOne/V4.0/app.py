@@ -1,13 +1,14 @@
 # app.py
 from flask import Flask, render_template, request, jsonify, session, redirect
-import random, csv, os, uuid
-from datetime import datetime, timedelta
+import random, csv, os, logging
+from datetime import datetime
 from collections import defaultdict
 from typing import List, Dict
 
 app = Flask(__name__)
 app.secret_key = 'your-very-secret-key-change-this'
-
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 class Leaderboard:
     def __init__(self, filename='Leaderboard.csv'):
@@ -121,8 +122,7 @@ class Leaderboard:
 
             # 更新时间戳
             entry['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-            print(f"DEBUG: After update - {success_key}: {entry[success_key]}, {attempts_key}: {entry[attempts_key]}")
+            
         else:
             entry['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             if success:
@@ -133,14 +133,8 @@ class Leaderboard:
                 entry[attempts_key] = "N/A"
             print(f"DEBUG: After update - {success_key}: {entry[success_key]}, {attempts_key}: {entry[attempts_key]}")
         # 保存到CSV文件
+        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S')+' '+class_name+student_name+" Update leaderboard: "+module_name+" -> "+"success = "+str(success)+" attempts = "+str(attempts))
         self.save()
-
-    def update_score(self, class_name, student_name, module_name, success, attempts):
-        """
-        预留接口：用于其他模块修改或添加成绩。
-        例如，可以在"国景"或"填国"模块完成后调用此方法。
-        """
-        self.add_score(class_name, student_name, module_name, success, attempts)
 
     def get_all_scores(self):
         """获取所有成绩，按通过题数降序，平均尝试次数升序排序"""
@@ -275,20 +269,6 @@ class ShanghaiMetroGraph:
                         "opening_year": opening_year
                     }
                     
-                    # 存储站点线路关系
-                    for line in lines:
-                        if line not in self.lines:
-                            self.lines[line] = []
-                        if name not in self.lines[line]:
-                            self.lines[line].append(name)
-                        
-                    # 创建站点节点（考虑同站不同线的情况）
-                    for line in lines:
-                        node_id = f"{name}_{line}"
-                        self.station_nodes[node_id] = {
-                            "station_name": name,
-                            "line": line
-                        }
         except FileNotFoundError:
             print("Error: data/StationInfo.csv not found.")
         except Exception as e:
@@ -379,25 +359,13 @@ def build_nation_lookup():
             for name in all_names:
                 if isinstance(name, str) and name.strip():
                     lookup[name.lower()] = {'zh_name': zh_name, 'coords': coords}
-    # print("Debug: Nation lookup keys (first 10):", list(lookup.keys())[:10])
-    # print("Debug: Example lookup entry for 'china':", lookup.get('china'))
     return lookup
 
 # 构建查找字典
 nation_lookup = build_nation_lookup()
 
 def validate_fill_guo_grid(problem_id, grid):
-    """
-    验证填国网格是否满足所有条件。
-    grid: 3x3 列表，包含国家名称或 None
-    constraints: 预留接口，当前未使用
-    solution: 预留接口，当前未使用
-    返回: (is_finished: bool, is_valid: bool, error_message: str or None)
-           is_finished: 网格是否已填满且正确
-           is_valid: 当前网格状态（填满时）是否有效（满足条件），或（未填满时）是否不违反唯一性
-           error_message: 错误信息
-    """
-    print(grid)
+    # print(grid)
     flat_grid = []
     # 检查国家是否唯一
     for i in range(0, 3):
@@ -416,7 +384,7 @@ def validate_fill_guo_grid(problem_id, grid):
             if grid[i][j] is None:
                 continue
             temp_set = f"{i},{j}"
-            print(cell_options[temp_set])
+            # print(cell_options[temp_set])
             if cell_options[temp_set].count(grid[i][j]) < 1:
                 flag = 1
                 break
@@ -441,7 +409,6 @@ def validate_fill_guo_grid(problem_id, grid):
             # 为了健壮性，可以返回无效状态
             return False, False, "网格内容不符合题目要求。" # is_finished=False, is_valid=False
 
-
 @app.route('/')
 def index():
     """首页 - 输入班级姓名"""
@@ -454,7 +421,7 @@ def login():
     class_name = request.form.get('class_name')
     student_name = request.form.get('student_name')
     
-    print(str(class_name)+str(student_name)+" Logged In!")
+    print(datetime.now().strftime('%Y-%m-%d %H:%M:%S')+' '+str(class_name)+str(student_name)+" Logged In!")
     
     if class_name and student_name:
         session['class'] = class_name
@@ -481,7 +448,8 @@ def start_game(game_type):
         # 如果当前游戏类型标记了因失败而结束，则渲染等待页面
         return render_template('wait_after_failure.html')
 
-    # ... (其余逻辑保持不变) ...
+    print(datetime.now().strftime('%Y-%m-%d %H:%M:%S')+' '+str(session.get('class','test'))+str(session.get('name','test'))+" Entered "+game_type)
+    
     if game_type == 'metro_guess':
         # 随机选择答案
         all_stations = metro_graph.get_all_stations()
@@ -498,7 +466,7 @@ def start_game(game_type):
         session.pop(failure_end_marker, None)
         
         # 测试输出
-        print(f"猜铁游戏开始 - 答案: {answer}")
+        # print(f"猜铁游戏开始 - 答案: {answer}")
         
         return render_template('metro_game.html',
                              stations=all_stations,
@@ -538,7 +506,7 @@ def start_game(game_type):
         # --- 清除失败结束标记 ---
         session.pop(failure_end_marker, None)
 
-        print(f"国景游戏开始 - 答案: {correct_nation_name} ({correct_nation_zh_name}), 坐标: {target_coords}, 图片: {image_filename}")
+        # print(f"国景游戏开始 - 答案: {correct_nation_name} ({correct_nation_zh_name}), 坐标: {target_coords}, 图片: {image_filename}")
 
         # 获取所有国家的**所有可能名称**列表用于前端选择和搜索
         all_possible_names = []
@@ -559,14 +527,6 @@ def start_game(game_type):
                                current_streak=session['streak']) # 传递当前连续猜对次数
     
     elif game_type == 'tian_guo':
-        # --- 修改：检查当前session是否因失败而结束游戏 ---
-        # 这个检查在函数入口处已经做了，所以这里不需要重复
-        # if session.get('game_type') == 'tian_guo' and session.get('fill_guo_game_over') and not session.get('fill_guo_success'):
-        #     failure_end_marker = f"{game_type}_failed_ended"
-        #     session[failure_end_marker] = True
-        #     return render_template('wait_after_failure.html')
-
-        # ... (填国部分保持原有逻辑不变) ...
         if not fill_guo_problems:
             return "没有可用的题目", 500
 
@@ -623,7 +583,7 @@ def submit_guess():
     guess = request.json.get('guess')
     answer = session.get('answer')
     
-    print("User:"+session.get('class',"test")+session.get('name',"test")+"\nGuess #"+str(session.get('attempts', 0)+1)+"\nGuess Station:"+guess+"\nAnswer:"+answer)
+    print(datetime.now().strftime('%Y-%m-%d %H:%M:%S')+' '+"User: "+session.get('class',"test")+session.get('name',"test")+"; Guess #"+str(session.get('attempts', 0)+1)+": "+guess+"; Answer: "+answer)
     
     if not guess or not answer:
         return jsonify({'error': '数据错误'})
@@ -726,8 +686,6 @@ def submit_guess():
     
     return jsonify(response_data)
 
-# app.py (在 submit_guess_guo_jing 函数之前或其他合适的位置添加这个新函数)
-
 def degrees_to_chinese_direction(bearing_degrees):
     """将度数转换为中文方向描述"""
     if bearing_degrees < 0:
@@ -737,8 +695,6 @@ def degrees_to_chinese_direction(bearing_degrees):
     directions = ['⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️']
     index = round(bearing_degrees / (360 / len(directions))) % len(directions)
     return directions[index]
-
-# ... (其他 app.py 代码保持不变) ...
 
 @app.route('/submit_guess_guo_jing', methods=['POST'])
 def submit_guess_guo_jing():
@@ -751,7 +707,7 @@ def submit_guess_guo_jing():
     answer_nation_zh_name = session.get('answer_nation_zh_name')
     answer_coords = session.get('answer_coords')
 
-    print("User:"+session.get('class',"test")+session.get('name',"test")+"\nGuess #"+str(session.get('attempts', 0)+1)+"\nGuess Country:"+guess_input+"\nAnswer:"+answer_nation_zh_name)
+    print(datetime.now().strftime('%Y-%m-%d %H:%M:%S')+' '+"User: "+session.get('class',"test")+session.get('name',"test")+"; Guess #"+str(session.get('attempts', 0)+1)+": "+guess_input+"; Answer :"+answer_nation_zh_name)
     
     if not guess_input or not answer_nation_name or not answer_coords:
         return jsonify({'error': '数据错误'})
@@ -858,22 +814,23 @@ def fill_guo_select_nation():
     row = data.get('row')
     col = data.get('col')
     nation_name_input = data.get('nation') # 用户输入的名称（可能是英文、中文、简称等）
-
+    lookup_result = nation_lookup.get(nation_name_input.lower())
+    nation_name_zh = lookup_result['zh_name'] # 获取中文全称
     if row is None or col is None or not nation_name_input:
         return jsonify({'error': '数据错误'})
 
     # --- 修改：通过 nation_lookup 获取中文全称 ---
-    lookup_result = nation_lookup.get(nation_name_input.lower())
+    
     if not lookup_result:
         return jsonify({'error': f'选择的国家不存在: {nation_name_input}'})
-
-    nation_name_zh = lookup_result['zh_name'] # 获取中文全称
 
     # 获取当前网格
     grid = session.get('fill_guo_grid', [[None for _ in range(3)] for _ in range(3)])
     problem_id = session.get('fill_guo_problem_index')
     cell_options = fill_guo_problems[problem_id]["cell_options"]
-
+    
+    print(datetime.now().strftime('%Y-%m-%d %H:%M:%S')+' '+"User: "+session.get('class',"test")+session.get('name',"test")+"; Problem ID: "+str(problem_id)+"; Guess: ("+str(row)+','+str(col)+"): "+nation_name_zh)
+    
     # --- 新增验证：检查新选择的国家是否违反规则 ---
     # 1. 检查是否与网格中已有的国家重复 (使用中文全称)
     flat_grid = [cell for r_row in grid for cell in r_row]
@@ -971,12 +928,12 @@ def fill_guo_select_nation():
             session['fill_guo_game_over'] = False
             session['fill_guo_success'] = False # 重置成功状态
 
-            print(f"填国游戏 - 完成第 {problem_index + 1} 题，进入第 {next_problem_index + 1} 题, 最大错误次数: {session['fill_guo_max_errors']}")
+            print(f"填国游戏 - {str(session.get('class','test'))}{str(session.get('name','test'))} 完成第 {problem_index + 1} 题，进入第 {next_problem_index + 1} 题, 最大错误次数: {session['fill_guo_max_errors']}")
 
             # 返回成功信息，并标记需要加载新题目
             return jsonify({
                 'success': True,
-                'message': f'恭喜，你完成了第 {problem_index + 1} 题！',
+                # 'message': f'恭喜，你完成了第 {problem_index + 1} 题！',
                 'grid': session['fill_guo_grid'], # 返回新题目的空网格
                 'errors_left': session['fill_guo_max_errors'], # 返回新题目的最大错误次数
                 'problem_index': next_problem_index, # 返回新题目的索引
@@ -1062,4 +1019,4 @@ def show_leaderboard():
     return render_template('leaderboard.html', scores=scores, page=page, total_pages=total_pages)
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, debug=False)
