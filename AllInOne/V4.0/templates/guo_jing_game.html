@@ -202,55 +202,74 @@
             cursor: not-allowed;
         }
 
-        /* 图片区域 */
-        .image-section {
+        /* 图片和结果并排区域 */
+        .content-section {
             padding: 30px 40px;
             background: #f8f9fa;
-            text-align: center;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            min-height: 500px;
+        }
+
+        .image-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
         }
 
         .image-container {
-            max-width: 800px;
-            margin: 0 auto;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .image-container img {
-            width: 100%;
+            max-width: 100%;
+            max-height: 400px;
             height: auto;
             display: block;
+            border-radius: 8px;
         }
 
-        /* 结果区域 */
         .results-section {
-            padding: 30px 40px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
         }
 
         .results-header {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr 1fr; /* 修改为4列 */
-            gap: 20px;
-            padding: 20px;
+            gap: 10px;
+            padding: 15px;
             background: #f8f9fa;
-            border-radius: 12px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
             font-weight: 600;
             color: #495057;
-            border: 2px solid #e9ecef;
+            border: 1px solid #e9ecef;
+            font-size: 0.9rem;
         }
 
         .results-container {
+            flex: 1;
             min-height: 300px;
-            max-height: 500px;
+            max-height: 350px;
             overflow-y: auto;
-            padding-right: 10px;
+            padding-right: 5px;
         }
 
         /* 自定义滚动条 */
         .results-container::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
 
         .results-container::-webkit-scrollbar-track {
@@ -267,20 +286,21 @@
         .guess-row {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr 1fr; /* 修改为4列，与表头对应 */
-            gap: 20px;
-            padding: 25px 20px;
-            margin-bottom: 15px;
+            gap: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
             transition: all 0.3s ease;
             align-items: center;
+            font-size: 0.9rem;
         }
 
         .guess-row:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .guess-row.correct {
@@ -291,53 +311,55 @@
         }
 
         @keyframes correctPulse {
-            0% { transform: scale(1); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-            50% { transform: scale(1.02); box-shadow: 0 0 30px rgba(64, 192, 87, 0.5); }
-            100% { transform: scale(1); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+            0% { transform: scale(1); box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+            50% { transform: scale(1.02); box-shadow: 0 0 20px rgba(64, 192, 87, 0.5); }
+            100% { transform: scale(1); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         }
 
         .nation-name {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: #212529;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .nation-name i {
-            font-size: 1.1rem;
+            font-size: 1rem;
             color: #4c6ef5;
         }
 
         .distance-box {
             text-align: center;
-            padding: 10px;
+            padding: 8px;
+            font-size: 0.9rem;
         }
 
         .distance-value {
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             font-weight: 700;
             color: #4c6ef5;
         }
 
         .distance-label {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             color: #6c757d;
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .direction-box {
             text-align: center;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 8px;
+            border-radius: 6px;
             background: #f8f9fa;
-            border: 2px solid #e9ecef;
+            border: 1px solid #e9ecef;
             font-weight: 600;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
+            font-size: 0.85rem;
         }
 
         .direction-label {
@@ -475,13 +497,18 @@
 
         /* 响应式设计 */
         @media (max-width: 992px) {
+            .content-section {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
             .header h1 {
                 font-size: 2rem;
             }
             
             .guess-row, .results-header {
                 grid-template-columns: 1fr;
-                gap: 15px;
+                gap: 10px;
                 text-align: center;
             }
             
@@ -500,7 +527,7 @@
         }
 
         @media (max-width: 576px) {
-            .header, .game-controls, .image-section, .results-section, .footer {
+            .header, .game-controls, .content-section, .footer {
                 padding: 20px;
             }
             
@@ -515,9 +542,13 @@
             .modal-content h2 {
                 font-size: 2rem;
             }
+            
+            .results-header, .guess-row {
+                font-size: 0.8rem;
+            }
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css  ">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
@@ -569,28 +600,33 @@
             </div>
         </div>
 
-        <!-- 图片区域 -->
-        <div class="image-section">
-            <div class="image-container">
-                <img src="{{ url_for('static', filename='images/' + image_filename) }}" alt="待猜测的国家风景图片" id="gameImage">
+        <!-- 图片和结果并排区域 -->
+        <div class="content-section">
+            <!-- 图片区 -->
+            <div class="image-section">
+                <h3 style="text-align: center; margin-bottom: 15px; color: #495057;">待猜测的风景</h3>
+                <div class="image-container">
+                    <img src="{{ url_for('static', filename='images/' + image_filename) }}" alt="待猜测的国家风景图片" id="gameImage">
+                </div>
             </div>
-        </div>
 
-        <!-- 结果区域 -->
-        <div class="results-section">
-            <div class="results-header">
-                <div>猜测国家</div>
-                <div>距离（大圆）</div>
-                <div>方向（大圆）</div> <!-- 原有方向列 -->
-                <div>方向（经纬度）</div> <!-- 新增方向（经纬度）列 -->
-            </div>
-            
-            <div class="results-container" id="resultsContainer">
-                <!-- 猜测结果将在这里显示 -->
-                <div style="text-align: center; padding: 50px; color: #adb5bd;">
-                    <i class="fas fa-globe-americas" style="font-size: 3rem; margin-bottom: 20px; display: block;"></i>
-                    <h3>开始你的第一次猜测吧！</h3>
-                    <p>选择一个国家提交，看看离目标有多远</p>
+            <!-- 结果区域 -->
+            <div class="results-section">
+                <h3 style="text-align: center; margin-bottom: 15px; color: #495057;">猜测历史</h3>
+                <div class="results-header">
+                    <div>猜测国家</div>
+                    <div>距离</div>
+                    <div>方向(大圆)</div>
+                    <div>方向(经纬)</div>
+                </div>
+                
+                <div class="results-container" id="resultsContainer">
+                    <!-- 猜测结果将在这里显示 -->
+                    <div style="text-align: center; padding: 30px; color: #adb5bd;">
+                        <i class="fas fa-globe-americas" style="font-size: 2rem; margin-bottom: 15px; display: block;"></i>
+                        <h3 style="font-size: 1.2rem;">开始你的第一次猜测吧！</h3>
+                        <p style="font-size: 0.9rem;">选择一个国家提交，看看离目标有多远</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -848,7 +884,7 @@
             modalButtons.innerHTML = ''; // 清空现有按钮
 
             if (isCorrect) {
-                // 如果猜对了，提供“再来一题”和“退出”按钮
+                // 如果猜对了，提供"再来一题"和"退出"按钮
                 const replayBtn = document.createElement('button');
                 replayBtn.className = 'modal-btn btn-primary';
                 replayBtn.innerHTML = '<i class="fas fa-redo"></i> 再来一题';
